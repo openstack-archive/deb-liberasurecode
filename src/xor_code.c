@@ -71,16 +71,16 @@ int missing_elements_bm(xor_code_t *code_desc, int *missing_elements, int (*bit_
   return bm;
 }
 
-void *aligned_malloc( size_t size, int align )
+void *aligned_malloc( size_t size, size_t align )
 {
-    void *mem = malloc( size + (align-1) + sizeof(void*) );
     char *amem;
+
+    void *mem = malloc( size + (align-1) + sizeof(void*) );
     if (!mem) {
       return NULL;
     }
 
-    amem = ((char*)mem) + sizeof(void*);
-    amem += align - ((unsigned long)amem & (align - 1));
+    amem = (char *) (((size_t) mem + sizeof(void *) + align - 1) & ~(align - 1));
 
     ((void**)amem)[-1] = mem;
     return amem;
