@@ -73,10 +73,6 @@ int missing_elements_bm(xor_code_t *code_desc, int *missing_elements, int (*bit_
 
 failure_pattern_t get_failure_pattern(xor_code_t *code_desc, int *missing_idxs);
 
-void *aligned_malloc( size_t size, size_t align);
-
-void aligned_free(void *mem);
-
 void fast_memcpy(char *dst, char *src, int size);
 
 void xor_bufs_and_store(char *buf1, char *buf2, int blocksize);
