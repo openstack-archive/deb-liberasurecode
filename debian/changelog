@@ -1,5 +1,5 @@
 liberasurecode (0.9.10-1) unstable; urgency=low
 
-  * Initial release (Closes: #XXXXXX).
+  * Initial release (Closes: #769516).
 
  -- Thomas Goirand <zigo@debian.org>  Sun, 25 May 2014 16:35:49 +0800
