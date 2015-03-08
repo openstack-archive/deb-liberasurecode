@@ -33,7 +33,7 @@
 #include "erasurecode_preprocessing.h"
 #include "erasurecode_postprocessing.h"
 #include "erasurecode_stdinc.h"
-#include "erasurecode/alg_sig.h"
+#include "alg_sig.h"
 
 /* =~=*=~==~=*=~==~=*=~= Supported EC backends =~=*=~==~=*=~==~=*=~==~=*=~== */
 
@@ -43,6 +43,7 @@ extern struct ec_backend_common backend_flat_xor_hd;
 extern struct ec_backend_common backend_jerasure_rs_vand;
 extern struct ec_backend_common backend_jerasure_rs_cauchy;
 extern struct ec_backend_common backend_isa_l_rs_vand;
+extern struct ec_backend_common backend_shss;
 
 ec_backend_t ec_backends_supported[] = {
     (ec_backend_t) &backend_null,
@@ -50,6 +51,7 @@ ec_backend_t ec_backends_supported[] = {
     (ec_backend_t) &backend_jerasure_rs_cauchy,
     (ec_backend_t) &backend_flat_xor_hd,
     (ec_backend_t) &backend_isa_l_rs_vand,
+    (ec_backend_t) &backend_shss,
     NULL,
 };
 
@@ -136,7 +138,7 @@ exit:
 int liberasurecode_backend_instance_unregister(ec_backend_t instance)
 {
     int rc = 0;  /* return call value */
-    
+
     rc = rwlock_wrlock(&active_instances_rwlock);
     if (rc == 0) {
         SLIST_REMOVE(&active_instances, instance, ec_backend, link);
@@ -196,7 +198,7 @@ void __attribute__ ((constructor))
 liberasurecode_init(void) {
     /* init logging */
     openlog("liberasurecode", LOG_PID | LOG_CONS, LOG_USER);
-    
+
     /* populate supported backends list as a string */
     {
         int i;
@@ -219,7 +221,7 @@ liberasurecode_exit(void) {
 /* =~=*=~==~=*=~= liberasurecode frontend API implementation =~=*=~==~=*=~== */
 
 /**
- * Create a liberasurecode instance and return a descriptor 
+ * Create a liberasurecode instance and return a descriptor
  * for use with EC operations (encode, decode, reconstruct)
  *
  * @param id - one of the supported backends as
@@ -244,7 +246,7 @@ int liberasurecode_instance_create(const ec_backend_id_t id,
     ec_backend_t instance = NULL;
     struct ec_backend_args bargs;
     if (!args)
-        return -1;
+        return -EINVALIDPARAMS;
 
     if (id >= EC_BACKENDS_MAX)
         return -EBACKENDNOTSUPP;
@@ -313,9 +315,9 @@ int liberasurecode_instance_destroy(int desc)
 
 /**
  * Cleanup structures allocated by librasurecode_encode
- * 
+ *
  * The caller has no context, so cannot safely free memory
- * allocated by liberasurecode, so it must pass the 
+ * allocated by liberasurecode, so it must pass the
  * deallocation responsibility back to liberasurecode.
  *
  * @param desc - liberasurecode descriptor/handle
@@ -331,6 +333,7 @@ int liberasurecode_encode_cleanup(int desc,
                                   char **encoded_parity)
 {
     int i, k, m;
+
     ec_backend_t instance = liberasurecode_backend_instance_get_by_desc(desc);
     if (NULL == instance) {
         return -EBACKENDNOTAVAIL;
@@ -346,12 +349,11 @@ int liberasurecode_encode_cleanup(int desc,
 
         free(encoded_data);
     }
-   
-    if (encoded_parity) { 
+
+    if (encoded_parity) {
         for (i = 0; i < m; i++) {
             free(encoded_parity[i]);
         }
-    
         free(encoded_parity);
     }
 
@@ -386,29 +388,29 @@ int liberasurecode_encode(int desc,
 
     if (orig_data == NULL) {
         log_error("Pointer to data buffer is null!");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
     if (orig_data_size <= 0) {
         log_error("Size of data to encode must be a positive value");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
     if (encoded_data == NULL) {
         log_error("Pointer to encoded data buffers is null!");
-        return -1;
+        return -EINVALIDPARAMS;
     }
 
     if (encoded_parity == NULL) {
         log_error("Pointer to encoded parity buffers is null!");
-        return -1;
+        return -EINVALIDPARAMS;
     }
 
     if (fragment_len == NULL) {
         log_error("Pointer to fragment length is null!");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
@@ -439,6 +441,9 @@ int liberasurecode_encode(int desc,
     ret = prepare_fragments_for_encode(instance, k, m, orig_data, orig_data_size,
                                        *encoded_data, *encoded_parity, &blocksize);
     if (ret < 0) {
+        // ensure encoded_data/parity point the head of fragment_ptr
+        get_fragment_ptr_array_from_data(*encoded_data, *encoded_data, k);
+        get_fragment_ptr_array_from_data(*encoded_parity, *encoded_parity, m);
         goto out;
     }
 
@@ -446,6 +451,9 @@ int liberasurecode_encode(int desc,
     ret = instance->common.ops->encode(instance->desc.backend_desc,
                                        *encoded_data, *encoded_parity, blocksize);
     if (ret < 0) {
+        // ensure encoded_data/parity point the head of fragment_ptr
+        get_fragment_ptr_array_from_data(*encoded_data, *encoded_data, k);
+        get_fragment_ptr_array_from_data(*encoded_parity, *encoded_parity, m);
         goto out;
     }
 
@@ -453,6 +461,7 @@ int liberasurecode_encode(int desc,
                                           *encoded_data, *encoded_parity);
 
     *fragment_len = get_fragment_size((*encoded_data)[0]);
+
 out:
     if (ret) {
         /* Cleanup the allocations we have done */
@@ -471,7 +480,7 @@ out:
  *
  * @param desc - liberasurecode descriptor/handle
  *        from liberasurecode_instance_create()
- * @param data - (char *) buffer of data decoded by 
+ * @param data - (char *) buffer of data decoded by
  *        librasurecode_decode
  * @return 0 in success; -error otherwise
  */
@@ -495,6 +504,7 @@ int liberasurecode_decode_cleanup(int desc, char *data)
  * @param fragments - erasure encoded fragments (> = k)
  * @param num_fragments - number of fragments being passed in
  * @param fragment_len - length of each fragment (assume they are the same)
+ * @param force_metadata_checks - force fragment metadata checks (default: 0)
  * @param out_data - _output_ pointer to decoded data
  * @param out_data_len - _output_ length of decoded output
  * @return 0 on success, -error code otherwise
@@ -502,6 +512,7 @@ int liberasurecode_decode_cleanup(int desc, char *data)
 int liberasurecode_decode(int desc,
         char **available_fragments,                     /* input */
         int num_fragments, uint64_t fragment_len,       /* input */
+        int force_metadata_checks,                      /* input */
         char **out_data, uint64_t *out_data_len)        /* output */
 {
     int i, j;
@@ -527,24 +538,29 @@ int liberasurecode_decode(int desc,
 
     if (NULL == available_fragments) {
         log_error("Pointer to encoded fragments buffer is null!");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
     if (NULL == out_data) {
         log_error("Pointer to decoded data buffer is null!");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
     if (NULL == out_data_len) {
         log_error("Pointer to decoded data length variable is null!");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
     k = instance->args.uargs.k;
     m = instance->args.uargs.m;
+
+    if (num_fragments < k) {
+        ret = -EINSUFFFRAGS;
+        goto out;
+    }
 
     /*
      * Try to re-assebmle the original data before attempting a decode
@@ -553,7 +569,9 @@ int liberasurecode_decode(int desc,
                               available_fragments, num_fragments,
                               out_data, out_data_len);
 
-    if (ret == 0) {
+    /* shss (ntt_backend) must force to decode */
+    // TODO: Add a frag and function to handle whether the backend want to decode or not.
+    if (ret == 0 && instance->common.id != 5) {
         /* We were able to get the original data without decoding! */
         goto out;
     }
@@ -566,19 +584,34 @@ int liberasurecode_decode(int desc,
         log_error("Could not allocate data buffer!");
         goto out;
     }
-    
+
     parity = alloc_zeroed_buffer(sizeof(char*) * m);
     if (NULL == parity) {
         log_error("Could not allocate parity buffer!");
         goto out;
     }
-    
+
     missing_idxs = alloc_and_set_buffer(sizeof(char*) * k, -1);
     if (NULL == missing_idxs) {
         log_error("Could not allocate missing_idxs buffer!");
         goto out;
     }
-    
+
+    /* If metadata checks requested, check fragment integrity upfront */
+    if (force_metadata_checks) {
+        int num_invalid_fragments = 0;
+        for (i = 0; i < num_fragments; ++i) {
+            if (is_invalid_fragment(desc, available_fragments[i])) {
+                ++num_invalid_fragments;
+            }
+        }
+        if ((num_fragments - num_invalid_fragments) < k) {
+            ret = -EINSUFFFRAGS;
+            log_error("Not enough valid fragments available for decode!");
+            goto out;
+        }
+    }
+
     /*
      * Separate the fragments into data and parity.  Also determine which
      * pieces are missing.
@@ -616,20 +649,20 @@ int liberasurecode_decode(int desc,
     ret = instance->common.ops->decode(instance->desc.backend_desc,
                                        data_segments, parity_segments,
                                        missing_idxs, blocksize);
-    
+
     if (ret < 0) {
         log_error("Encountered error in backend decode function!");
         goto out;
     }
 
     /*
-     * Need to fill in the missing data headers so we can generate 
+     * Need to fill in the missing data headers so we can generate
      * the original string.
      */
     j = 0;
-    while (missing_idxs[j] >= 0) { 
+    while (missing_idxs[j] >= 0) {
         int set_chksum = 1;
-        int missing_idx = missing_idxs[j]; 
+        int missing_idx = missing_idxs[j];
         if (missing_idx < k) {
             /* Generate headers */
             char *fragment_ptr = data[missing_idx];
@@ -640,7 +673,7 @@ int liberasurecode_decode(int desc,
         }
         j++;
     }
-    
+
     /* Try to generate the original string */
     ret = fragments_to_string(k, m, data, k, out_data, out_data_len);
 
@@ -714,19 +747,19 @@ int liberasurecode_reconstruct_fragment(int desc,
 
     if (NULL == available_fragments) {
         log_error("Can not reconstruct fragment, available fragments pointer is NULL");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
     if (NULL == out_fragment) {
         log_error("Can not reconstruct fragment, output fragment pointer is NULL");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
-    
+
     k = instance->args.uargs.k;
     m = instance->args.uargs.m;
-    
+
     /*
      * Allocate arrays for data, parity and missing_idxs
      */
@@ -735,19 +768,19 @@ int liberasurecode_reconstruct_fragment(int desc,
         log_error("Could not allocate data buffer!");
         goto out;
     }
-    
+
     parity = alloc_zeroed_buffer(sizeof(char*) * m);
     if (NULL == parity) {
         log_error("Could not allocate parity buffer!");
         goto out;
     }
-    
+
     missing_idxs = alloc_and_set_buffer(sizeof(int*) * k, -1);
     if (NULL == missing_idxs) {
         log_error("Could not allocate missing_idxs buffer!");
         goto out;
     }
-    
+
     /*
      * Separate the fragments into data and parity.  Also determine which
      * pieces are missing.
@@ -800,7 +833,7 @@ int liberasurecode_reconstruct_fragment(int desc,
     init_fragment_header(fragment_ptr);
     add_fragment_metadata(instance, fragment_ptr, destination_idx,
                           orig_data_size, blocksize, instance->args.uargs.ct,
-                          !set_chksum);
+                          set_chksum);
 
     /*
      * Copy the reconstructed fragment to the output buffer
@@ -841,7 +874,7 @@ out:
  * @desc: liberasurecode instance descriptor (obtained with
  *        liberasurecode_instance_create)
  * @fragments_to_reconstruct list of indexes to reconstruct
- * @fragments_to_exclude list of indexes to exclude from 
+ * @fragments_to_exclude list of indexes to exclude from
           reconstruction equation
  * @fragments_needed list of fragments needed to reconstruct
           fragments in fragments_to_reconstruct
@@ -850,7 +883,7 @@ out:
  *        from (in 'fragments_needed')
  */
 int liberasurecode_fragments_needed(int desc,
-                                    int *fragments_to_reconstruct, 
+                                    int *fragments_to_reconstruct,
                                     int *fragments_to_exclude,
                                     int *fragments_needed)
 {
@@ -863,19 +896,19 @@ int liberasurecode_fragments_needed(int desc,
     }
     if (NULL == fragments_to_reconstruct) {
         log_error("Unable to determine list of fragments needed, pointer to list of indexes to reconstruct is NULL.");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out_error;
     }
 
     if (NULL == fragments_to_exclude) {
         log_error("Unable to determine list of fragments needed, pointer to list of fragments to exclude is NULL.");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out_error;
     }
 
     if (NULL == fragments_needed) {
         log_error("Unable to determine list of fragments needed, pointer to list of fragments to reconstruct is NULL.");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out_error;
     }
 
@@ -910,13 +943,13 @@ int liberasurecode_get_fragment_metadata(char *fragment,
 
     if (NULL == fragment) {
         log_error("Need valid fragment object to get metadata for");
-        ret = -1;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
     if (NULL == fragment_metadata) {
         log_error("Need valid fragment_metadata object for return value");
-        ret = -2;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
@@ -924,7 +957,7 @@ int liberasurecode_get_fragment_metadata(char *fragment,
     fragment_hdr = (fragment_header_t *) fragment;
     if (LIBERASURECODE_FRAG_HEADER_MAGIC != fragment_hdr->magic) {
         log_error("Invalid fragment, illegal magic value");
-        ret = -2;
+        ret = -EINVALIDPARAMS;
         goto out;
     }
 
@@ -937,6 +970,8 @@ int liberasurecode_get_fragment_metadata(char *fragment,
             computed_chksum = crc32(0, fragment_data, fragment_size);
             if (stored_chksum != computed_chksum) {
                 fragment_metadata->chksum_mismatch = 1;
+            } else {
+                fragment_metadata->chksum_mismatch = 0;
             }
             break;
         }
@@ -951,29 +986,100 @@ out:
     return ret;
 }
 
-/**
- * Verify a subset of fragments generated by encode()
- *
- * @param desc - liberasurecode descriptor/handle
- *        from liberasurecode_instance_create()
- * @param fragments - fragments part of the EC stripe to verify
- * @num_fragments - number of fragments part of the EC stripe
- *
- * @ returns 0 if stripe checksum verification is successful
- *           -1 otherwise
- */
+int liberasurecode_verify_fragment_metadata(ec_backend_t be,
+                                            fragment_metadata_t *md)
+{
+    if (md->backend_id != be->common.id) {
+        return 1;
+    }
+    if (!be->common.ops->is_compatible_with(md->backend_version))  {
+        return 1;
+    }
+    return 0;
+}
+
+int is_invalid_fragment(int desc, char *fragment)
+{
+    uint32_t ver = 0;
+    fragment_metadata_t fragment_metadata;
+    ec_backend_t be = liberasurecode_backend_instance_get_by_desc(desc);
+    if (!be) {
+        log_error("Unable to verify fragment metadata: invalid backend id %d.",
+                desc);
+        return 1;
+    }
+    if (!fragment) {
+        log_error("Unable to verify fragment validity: fragments missing.");
+        return 1;
+    }
+    if (get_libec_version(fragment, &ver) != 0 ||
+            ver != LIBERASURECODE_VERSION) {
+        return 1;
+    }
+    if (liberasurecode_get_fragment_metadata(fragment,
+            &fragment_metadata) != 0) {
+        return 1;
+    }
+    if (liberasurecode_verify_fragment_metadata(be,
+            &fragment_metadata) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+int is_valid_fragment_metadata(int desc, fragment_metadata_t *fragment_metadata)
+{
+    ec_backend_t be = liberasurecode_backend_instance_get_by_desc(desc);
+    if (!be) {
+        log_error("Unable to verify stripe metadata: invalid backend id %d.",
+                desc);
+        return -EINVALIDPARAMS;
+    }
+    if (liberasurecode_verify_fragment_metadata(be,
+            fragment_metadata) != 0) {
+        return -EBADHEADER;
+    }
+    if (!be->common.ops->is_compatible_with(fragment_metadata->backend_version))  {
+        return -EBADHEADER;
+    }
+    if (fragment_metadata->chksum_mismatch == 1) {
+        return -EBADCHKSUM;
+    }
+    return 0;
+}
+
 int liberasurecode_verify_stripe_metadata(int desc,
         char **fragments, int num_fragments)
 {
+    int i = 0;
+    if (!fragments) {
+        log_error("Unable to verify stripe metadata: fragments missing.");
+        return -EINVALIDPARAMS;
+    }
+    if (num_fragments <= 0) {
+        log_error("Unable to verify stripe metadata: "
+                "number of fragments must be greater than 0.");
+        return -EINVALIDPARAMS;
+    }
+
+    for (i = 0; i < num_fragments; i++) {
+        fragment_metadata_t *fragment_metadata = (fragment_metadata_t*)fragments[i];
+        int ret = is_valid_fragment_metadata(desc, fragment_metadata);
+        if (ret < 0) {
+            return ret;
+        }
+    }
+
     return 0;
 }
+
 /* =~=*=~==~=*=~==~=*=~==~=*=~===~=*=~==~=*=~===~=*=~==~=*=~===~=*=~==~=*=~= */
 
 /**
- * This computes the aligned size of a buffer passed into 
+ * This computes the aligned size of a buffer passed into
  * the encode function.  The encode function must pad fragments
  * to be algined with the word size (w) and the last fragment also
- * needs to be aligned.  This computes the sum of the algined fragment 
+ * needs to be aligned.  This computes the sum of the algined fragment
  * sizes for a given buffer to encode.
  */
 int liberasurecode_get_aligned_data_size(int desc, uint64_t data_len)
@@ -988,7 +1094,7 @@ int liberasurecode_get_aligned_data_size(int desc, uint64_t data_len)
         ret = -EBACKENDNOTAVAIL;
         goto out;
     }
-    
+
     k = instance->args.uargs.k;
 
     word_size = instance->common.ops->element_size(
@@ -996,7 +1102,7 @@ int liberasurecode_get_aligned_data_size(int desc, uint64_t data_len)
 
     alignment_multiple = k * word_size;
 
-    ret = (int) ceill( (double) 
+    ret = (int) ceill( (double)
             data_len / alignment_multiple) * alignment_multiple;
 
 out:
@@ -1010,6 +1116,16 @@ out:
 int liberasurecode_get_minimum_encode_size(int desc)
 {
     return liberasurecode_get_aligned_data_size(desc, 1);
+}
+
+int liberasurecode_get_fragment_size(int desc, int data_len)
+{
+    ec_backend_t instance = liberasurecode_backend_instance_get_by_desc(desc);
+    // TODO: Create a common function to calculate fragment size also for preprocessing
+    int aligned_data_len = get_aligned_data_size(instance, data_len);
+    int size = (aligned_data_len / instance->args.uargs.k) + instance->common.backend_metadata_size;
+
+    return size;
 }
 
 /* ==~=*=~==~=*=~==~=*=~==~=*=~==~=* misc *=~==~=*=~==~=*=~==~=*=~==~=*=~== */

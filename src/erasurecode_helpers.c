@@ -32,11 +32,11 @@
 #include "erasurecode_helpers.h"
 #include "erasurecode_stdinc.h"
 #include "erasurecode_version.h"
-#include "erasurecode/alg_sig.h"
+#include "alg_sig.h"
 
 /* ==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~== */
 
-static bool is_valid_fragment(char *buf)
+static bool is_fragment(char *buf)
 {
     fragment_header_t *header = (fragment_header_t *) buf;
 
@@ -163,13 +163,11 @@ int free_fragment_buffer(char *buf)
  */
 uint64_t get_fragment_size(char *buf)
 {
-    fragment_header_t *header = NULL;
 
     if (NULL == buf)
         return -1;
 
-    header = (fragment_header_t *) buf;
-    return (header->meta.size + sizeof(fragment_header_t));
+    return get_fragment_buffer_size(buf) + sizeof(fragment_header_t);
  }
 
 /**
@@ -187,9 +185,6 @@ int get_aligned_data_size(ec_backend_t instance, int data_len)
     int word_size = w / 8;
     int alignment_multiple;
     int aligned_size = 0;
-
-    /* Account for any custom metadata the backend wants to add in data_len */
-    data_len += instance->common.metadata_adder;
 
     /*
      * For Cauchy reed-solomon align to k*word_size*packet_size
@@ -227,6 +222,22 @@ int get_data_ptr_array_from_fragments(char **data_array, char **fragments,
             continue;
         }
         data_array[i] = get_data_ptr_from_fragment(frag);
+        num++;
+    }
+    return num;
+}
+
+int get_fragment_ptr_array_from_data(char **frag_array, char **data,
+                                     int num_data)
+{
+    int i = 0, num = 0;
+    for (i = 0; i < num_data; i++) {
+        char *data_ptr = frag_array[i];
+        if (data_ptr == NULL) {
+            data[i] = NULL;
+            continue;
+        }
+        data[i] = get_fragment_ptr_from_data(data_ptr);
         num++;
     }
     return num;
@@ -313,6 +324,47 @@ int get_fragment_payload_size(char *buf)
     return header->meta.size;
 }
 
+int set_fragment_backend_metadata_size(char *buf, int size)
+{
+    fragment_header_t *header = (fragment_header_t *) buf;
+
+    assert(NULL != header);
+    if (header->magic != LIBERASURECODE_FRAG_HEADER_MAGIC) {
+        log_error("Invalid fragment header (set fragment backend metadata size)!");
+        return -1;
+    }
+
+    header->meta.frag_backend_metadata_size = size;
+
+    return 0;
+}
+
+int get_fragment_backend_metadata_size(char *buf)
+{
+    fragment_header_t *header = (fragment_header_t *) buf;
+
+    assert(NULL != header);
+    if (header->magic != LIBERASURECODE_FRAG_HEADER_MAGIC) {
+        log_error("Invalid fragment header (get fragment backend metadata size)!");
+        return -1;
+    }
+
+    return header->meta.frag_backend_metadata_size;
+}
+
+int get_fragment_buffer_size(char *buf)
+{
+    fragment_header_t *header = (fragment_header_t *) buf;
+
+    assert(NULL != header);
+    if (header->magic != LIBERASURECODE_FRAG_HEADER_MAGIC) {
+        log_error("Invalid fragment header (get size)!");
+        return -1;
+    }
+
+    return header->meta.size + header->meta.frag_backend_metadata_size;
+}
+
 int set_orig_data_size(char *buf, int orig_data_size)
 {
     fragment_header_t *header = (fragment_header_t *) buf;
@@ -343,7 +395,7 @@ int get_orig_data_size(char *buf)
 
 int set_libec_version(char *buf)
 {
-    if (!is_valid_fragment(buf)) {
+    if (!is_fragment(buf)) {
             return -1;
     }
     fragment_header_t *header = (fragment_header_t *) buf;
@@ -353,7 +405,7 @@ int set_libec_version(char *buf)
 
 int get_libec_version(char *buf, uint32_t *ver)
 {
-    if (!is_valid_fragment(buf)) {
+    if (!is_fragment(buf)) {
             return -1;
     }
     fragment_header_t *header = (fragment_header_t *) buf;
@@ -363,7 +415,7 @@ int get_libec_version(char *buf, uint32_t *ver)
 
 int set_backend_id(char *buf, ec_backend_id_t id)
 {
-    if (!is_valid_fragment(buf)) {
+    if (!is_fragment(buf)) {
             return -1;
     }
     fragment_header_t *header = (fragment_header_t *) buf;
@@ -373,7 +425,7 @@ int set_backend_id(char *buf, ec_backend_id_t id)
 
 int get_backend_id(char *buf, ec_backend_id_t *id) 
 {
-    if (!is_valid_fragment(buf)) {
+    if (!is_fragment(buf)) {
             return -1;
     }
     fragment_header_t *header = (fragment_header_t *) buf;
@@ -383,7 +435,7 @@ int get_backend_id(char *buf, ec_backend_id_t *id)
 
 int set_backend_version(char *buf, uint32_t version) 
 {
-    if (!is_valid_fragment(buf)) {
+    if (!is_fragment(buf)) {
             return -1;
     }
     fragment_header_t *header = (fragment_header_t *) buf;
@@ -393,7 +445,7 @@ int set_backend_version(char *buf, uint32_t version)
 
 int get_backend_version(char *buf, uint32_t *version) 
 {
-    if (!is_valid_fragment(buf)) {
+    if (!is_fragment(buf)) {
             return -1;
     }
     fragment_header_t *header = (fragment_header_t *) buf;

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2014 Eric Lambert, Tushar Gohad, Kevin Greenan
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include "erasurecode.h"
 #include "erasurecode_helpers.h"
+#include "erasurecode_preprocessing.h"
 #include "erasurecode_backend.h"
 #include "alg_sig.h"
 #define NULL_BACKEND "null"
@@ -37,6 +38,7 @@
 #define JERASURE_RS_VAND_BACKEND "jerasure_rs_vand"
 #define JERASURE_RS_CAUCHY_BACKEND "jerasure_rs_cauchy"
 #define ISA_L_RS_VAND_BACKEND "isa_l_rs_vand"
+#define SHSS_BACKEND "shss"
 
 typedef void (*TEST_FUNC)();
 
@@ -85,6 +87,22 @@ struct ec_args isa_l_args = {
     .hd = 5,
 };
 
+int priv = 128;
+struct ec_args shss_args = {
+    .k = 6,
+    .m = 3,
+    .hd = 3,
+    .priv_args2 = &priv,
+};
+
+
+typedef enum {
+    LIBEC_VERSION_MISMATCH,
+    MAGIC_MISMATCH,
+    BACKEND_ID_MISMATCH,
+    BACKEND_VERSION_MISMATCH,
+} fragment_mismatch_scenario_t;
+
 char * get_name_from_backend_id(ec_backend_id_t be) {
     switch(be) {
         case EC_BACKEND_NULL:
@@ -97,6 +115,8 @@ char * get_name_from_backend_id(ec_backend_id_t be) {
             return FLAT_XOR_HD_BACKEND;
         case EC_BACKEND_ISA_L_RS_VAND:
             return ISA_L_RS_VAND_BACKEND;
+        case EC_BACKEND_SHSS:
+            return SHSS_BACKEND;
         default:
             return "UNKNOWN";
     }
@@ -121,6 +141,9 @@ struct ec_args *create_ec_args(ec_backend_id_t be, ec_checksum_type_t ct)
             break;
         case EC_BACKEND_ISA_L_RS_VAND:
             template = &isa_l_args;
+            break;
+        case EC_BACKEND_SHSS:
+            template = &shss_args;
             break;
         default:
             return NULL;
@@ -154,7 +177,7 @@ int *create_skips_array(struct ec_args *args, int skip)
     return buf;
 }
 
-static int create_frags_array(char ***array, 
+static int create_frags_array(char ***array,
                               char **data,
                               char **parity,
                               struct ec_args *args,
@@ -175,7 +198,7 @@ static int create_frags_array(char ***array,
         {
             continue;
         }
-        *ptr++ = data[i]; 
+        *ptr++ = data[i];
         num_frags++;
     }
     //add parity frags
@@ -183,11 +206,17 @@ static int create_frags_array(char ***array,
         if (parity[i] == NULL || skips[i + args->k] == 1) {
             continue;
         }
-        *ptr++ = parity[i]; 
+        *ptr++ = parity[i];
         num_frags++;
     }
 out:
     return num_frags;
+}
+
+static int encode_failure_stub(void *desc, char **data,
+                               char **parity, int blocksize)
+{
+    return -1;
 }
 
 static void validate_fragment_checksum(struct ec_args *args,
@@ -257,6 +286,8 @@ static void test_encode_invalid_args()
     char *orig_data = create_buffer(orig_data_size, 'x');
     char **encoded_data = NULL, **encoded_parity = NULL;
     uint64_t encoded_fragment_len = 0;
+    ec_backend_t instance = NULL;
+    int (*orig_encode_func)(void *, char **, char **, int);
 
     assert(orig_data != NULL);
     rc = liberasurecode_encode(desc, orig_data, orig_data_size,
@@ -285,6 +316,15 @@ static void test_encode_invalid_args()
     rc = liberasurecode_encode(desc, orig_data, orig_data_size,
             &encoded_data, &encoded_parity, NULL);
     assert(rc < 0);
+
+    instance = liberasurecode_backend_instance_get_by_desc(desc);
+    orig_encode_func = instance->common.ops->encode;
+    instance->common.ops->encode = encode_failure_stub;
+    rc = liberasurecode_encode(desc, orig_data, orig_data_size,
+            &encoded_data, &encoded_parity, &encoded_fragment_len);
+    assert(rc < 0);
+    instance->common.ops->encode = orig_encode_func;
+
     free(orig_data);
 }
 
@@ -339,23 +379,23 @@ static void test_decode_invalid_args()
                                          encoded_parity, &null_args, skips);
 
     rc = liberasurecode_decode(-1, avail_frags, num_avail_frags,
-                               encoded_fragment_len, &decoded_data,
-                               &decoded_data_len);
+                               encoded_fragment_len, 1,
+                               &decoded_data, &decoded_data_len);
     assert(rc < 0);
 
     rc = liberasurecode_decode(desc, NULL, num_avail_frags,
-                               encoded_fragment_len, &decoded_data,
-                               &decoded_data_len);
+                               encoded_fragment_len, 1,
+                               &decoded_data, &decoded_data_len);
     assert(rc < 0);
 
     rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
-                               encoded_fragment_len, NULL,
-                               &decoded_data_len);
+                               encoded_fragment_len, 1,
+                               NULL, &decoded_data_len);
     assert(rc < 0);
 
     rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
-                               encoded_fragment_len, &decoded_data,
-                               NULL);
+                               encoded_fragment_len, 1,
+                               &decoded_data, NULL);
     assert(rc < 0);
     free(skips);
     liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
@@ -389,6 +429,10 @@ static void test_reconstruct_fragment_invalid_args()
     int frag_len = 10;
     char **avail_frags = malloc(sizeof(char *) * 2);
     char *out_frag = malloc(frag_len);
+    int orig_data_size = 1024 * 1024;
+    char *orig_data = create_buffer(orig_data_size, 'x');
+    char **encoded_data = NULL, **encoded_parity = NULL;
+    uint64_t encoded_fragment_len = 0;
 
     assert(avail_frags);
     assert(out_frag);
@@ -404,6 +448,23 @@ static void test_reconstruct_fragment_invalid_args()
 
     rc = liberasurecode_reconstruct_fragment(desc, avail_frags, 1, frag_len, 1, NULL);
     assert(rc < 0);
+
+    free(out_frag);
+    free(avail_frags);
+
+    // Test for EINSUFFFRAGS
+    // we have to call encode to get fragments which have valid header.
+    rc = liberasurecode_encode(desc, orig_data, orig_data_size,
+            &encoded_data, &encoded_parity, &encoded_fragment_len);
+    assert(rc == 0);
+
+    out_frag = malloc(encoded_fragment_len);
+
+    assert(out_frag != NULL);
+    rc = liberasurecode_reconstruct_fragment(desc, avail_frags, 1, encoded_fragment_len, 1, out_frag);
+
+    assert(rc == -EINSUFFFRAGS);
+
     free(out_frag);
     free(avail_frags);
 }
@@ -463,16 +524,75 @@ static void test_verify_stripe_metadata_invalid_args() {
     char **frags = malloc(sizeof(char *) * num_frags);
 
     rc = liberasurecode_verify_stripe_metadata(desc, frags, num_frags);
-    assert(rc < 0);
+    assert(rc == -EINVALIDPARAMS);
 
     desc = liberasurecode_instance_create(EC_BACKEND_NULL, &null_args);
     assert(desc > 0);
 
     rc = liberasurecode_verify_stripe_metadata(desc, NULL, num_frags);
-    assert(rc < 0);
+    assert(rc == -EINVALIDPARAMS);
 
     rc = liberasurecode_verify_stripe_metadata(desc, frags, -1);
+    assert(rc == -EINVALIDPARAMS);
+
+    rc = liberasurecode_verify_stripe_metadata(desc, frags, 0);
+    assert(rc == -EINVALIDPARAMS);
+
+}
+
+static void test_get_fragment_partition()
+{
+    int i;
+    int rc = 0;
+    int desc = -1;
+    int orig_data_size = 1024 * 1024;
+    char *orig_data = create_buffer(orig_data_size, 'x');
+    char **encoded_data = NULL, **encoded_parity = NULL;
+    uint64_t encoded_fragment_len = 0;
+    int num_avail_frags = -1;
+    char **avail_frags = NULL;
+    int *skips = create_skips_array(&null_args, -1);
+    int *missing;
+
+    desc = liberasurecode_instance_create(EC_BACKEND_NULL, &null_args);
+    assert(desc > 0);
+    rc = liberasurecode_encode(desc, orig_data, orig_data_size,
+            &encoded_data, &encoded_parity, &encoded_fragment_len);
+    assert(0 == rc);
+
+    missing = alloc_and_set_buffer(sizeof(char*) * null_args.k, -1);
+
+    for(i = 0; i < null_args.m; i++) skips[i] = 1;
+    num_avail_frags = create_frags_array(&avail_frags, encoded_data,
+                                         encoded_parity, &null_args, skips);
+
+    rc = get_fragment_partition(null_args.k, null_args.m, avail_frags, num_avail_frags,
+                                encoded_data, encoded_parity, missing);
+    assert(0 == rc);
+
+    for(i = 0; i < null_args.m; i++) assert(missing[i] == i);
+    assert(missing[++i] == -1);
+
+    free(missing);
+
+    for(i = 0; i < null_args.m + 1; i++) skips[i] = 1;
+    num_avail_frags = create_frags_array(&avail_frags, encoded_data,
+                                         encoded_parity, &null_args, skips);
+
+    missing = alloc_and_set_buffer(sizeof(char*) * null_args.k, -1);
+    rc = get_fragment_partition(null_args.k, null_args.m, avail_frags, num_avail_frags,
+                                encoded_data, encoded_parity, missing);
+
+    for(i = 0; i < null_args.m + 1; i++) assert(missing[i] == i);
+    assert(missing[++i] == -1);
+
     assert(rc < 0);
+
+    free(missing);
+    free(skips);
+    liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
+    free(avail_frags);
+    free(orig_data);
 }
 
 static void encode_decode_test_impl(const ec_backend_id_t be_id,
@@ -493,8 +613,11 @@ static void encode_decode_test_impl(const ec_backend_id_t be_id,
     int num_avail_frags = 0;
     char *orig_data_ptr = NULL;
     int remaining = 0;
+    ec_backend_t be = NULL;
 
     desc = liberasurecode_instance_create(be_id, args);
+    be = liberasurecode_backend_instance_get_by_desc(desc);
+
     if (-EBACKENDNOTAVAIL == desc) {
         fprintf (stderr, "Backend library not available!\n");
         return;
@@ -515,11 +638,14 @@ static void encode_decode_test_impl(const ec_backend_id_t be_id,
         assert(header != NULL);
         fragment_metadata_t metadata = header->meta;
         assert(metadata.idx == i);
-        assert(metadata.size == encoded_fragment_len - frag_header_size);
+        assert(metadata.size == encoded_fragment_len - frag_header_size - be->common.backend_metadata_size);
         assert(metadata.orig_data_size == orig_data_size);
         char *data_ptr = frag + frag_header_size;
         int cmp_size = remaining >= metadata.size ? metadata.size : remaining;
-        assert(memcmp(data_ptr, orig_data_ptr, cmp_size) == 0); 
+        // shss doesn't keep original data on data fragments
+        if (be_id != 5) {
+            assert(memcmp(data_ptr, orig_data_ptr, cmp_size) == 0);
+        }
         remaining -= cmp_size;
         orig_data_ptr += metadata.size;
     }
@@ -527,10 +653,9 @@ static void encode_decode_test_impl(const ec_backend_id_t be_id,
     num_avail_frags = create_frags_array(&avail_frags, encoded_data,
                                          encoded_parity, args, skip);
     assert(num_avail_frags != -1);
-
     rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
-                               encoded_fragment_len, &decoded_data,
-                               &decoded_data_len);
+                               encoded_fragment_len, 1,
+                               &decoded_data, &decoded_data_len);
     assert(0 == rc);
     assert(decoded_data_len == orig_data_size);
     assert(memcmp(decoded_data, orig_data, orig_data_size) == 0);
@@ -549,7 +674,7 @@ static void encode_decode_test_impl(const ec_backend_id_t be_id,
     free(avail_frags);
 }
 
-static void reconstruct_test_impl(const ec_backend_id_t be_id, 
+static void reconstruct_test_impl(const ec_backend_id_t be_id,
                                  struct ec_args *args,
                                  int *skip)
 {
@@ -603,7 +728,7 @@ static void reconstruct_test_impl(const ec_backend_id_t be_id,
     liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
 }
 
-static void test_fragments_needed_impl(const ec_backend_id_t be_id, 
+static void test_fragments_needed_impl(const ec_backend_id_t be_id,
                                       struct ec_args *args)
 {
     int *fragments_to_reconstruct = NULL;
@@ -638,7 +763,7 @@ static void test_fragments_needed_impl(const ec_backend_id_t be_id,
      * first parity element.  Select one of the data elements
      * as the item to reconstruct and select one not in that
      * set as the missing element.  Elements needed should
-     * be equal to the parity element, plus all other data 
+     * be equal to the parity element, plus all other data
      * elements connected to it.
      *
      * Simple example with XOR code (k=10, m=5):
@@ -664,12 +789,12 @@ static void test_fragments_needed_impl(const ec_backend_id_t be_id,
     fragments_to_reconstruct[1] = -1;
     fragments_to_exclude[0] = -1;
 
-    ret = liberasurecode_fragments_needed(desc, 
-                                          fragments_to_reconstruct, 
-                                          fragments_to_exclude, 
+    ret = liberasurecode_fragments_needed(desc,
+                                          fragments_to_reconstruct,
+                                          fragments_to_exclude,
                                           fragments_needed);
     assert(ret > -1);
-    
+
     // "Reconstruct" the first data in the parity equation
     fragments_to_reconstruct[0] = fragments_needed[0];
     fragments_to_reconstruct[1] = -1;
@@ -694,12 +819,12 @@ static void test_fragments_needed_impl(const ec_backend_id_t be_id,
 
     assert(fragments_to_exclude[0] > -1);
 
-    ret = liberasurecode_fragments_needed(desc, 
-                                          fragments_to_reconstruct, 
-                                          fragments_to_exclude, 
+    ret = liberasurecode_fragments_needed(desc,
+                                          fragments_to_reconstruct,
+                                          fragments_to_exclude,
                                           new_fragments_needed);
     assert(ret > -1);
-   
+
     // Verify that new_fragments_needed contains the
     // first parity element and all data elements connected
     // to that parity element sans the data to reconstruct.
@@ -905,6 +1030,143 @@ static void test_fragments_needed(const ec_backend_id_t be_id,
     test_fragments_needed_impl(be_id, args);
 }
 
+static void test_verify_stripe_metadata(const ec_backend_id_t be_id,
+                                        struct ec_args *args)
+{
+    int orig_data_size = 1024;
+    char **encoded_data = NULL, **encoded_parity = NULL;
+    char **avail_frags = NULL;
+    uint64_t encoded_fragment_len = 0;
+    int rc = -1;
+    int num_avail_frags = -1;
+    int *skip = create_skips_array(args,-1);
+    char *orig_data = create_buffer(orig_data_size, 'x');
+    int desc = liberasurecode_instance_create(be_id, args);
+
+    if (-EBACKENDNOTAVAIL == desc) {
+        fprintf (stderr, "Backend library not available!\n");
+        return;
+    }
+    assert(desc > 0);
+
+    assert(orig_data != NULL);
+    rc = liberasurecode_encode(desc, orig_data, orig_data_size,
+            &encoded_data, &encoded_parity, &encoded_fragment_len);
+    assert(0 == rc);
+
+    num_avail_frags = create_frags_array(&avail_frags, encoded_data,
+            encoded_parity, args, skip);
+
+    rc = liberasurecode_verify_stripe_metadata(desc, avail_frags,
+            num_avail_frags);
+    assert(0 == rc);
+
+    liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
+    free(orig_data);
+    free(skip);
+}
+
+static void verify_fragment_metadata_mismatch_impl(const ec_backend_id_t be_id, struct ec_args *args,
+        fragment_mismatch_scenario_t scenario)
+{
+    int orig_data_size = 1024;
+    char **encoded_data = NULL, **encoded_parity = NULL;
+    char **avail_frags = NULL;
+    uint64_t encoded_fragment_len = 0;
+    int rc = -1;
+    int num_avail_frags = -1;
+    int i = 0;
+    uint32_t orig_libec_ver = 0;
+    uint32_t orig_be_ver = 0;
+    uint8_t orig_be_id = 0;
+    int *skip = create_skips_array(args,-1);
+    char *orig_data = create_buffer(orig_data_size, 'x');
+    int desc = liberasurecode_instance_create(be_id, args);
+
+    if (-EBACKENDNOTAVAIL == desc) {
+        fprintf (stderr, "Backend library not available!\n");
+        return;
+    }
+    assert(desc > 0);
+    assert(orig_data != NULL);
+    rc = liberasurecode_encode(desc, orig_data, orig_data_size,
+            &encoded_data, &encoded_parity, &encoded_fragment_len);
+    assert(0 == rc);
+    num_avail_frags = create_frags_array(&avail_frags, encoded_data,
+            encoded_parity, args, skip);
+    for (i = 0; i < num_avail_frags; i++) {
+        char * cur_frag = avail_frags[i];
+        //corrupt fragment
+        switch (scenario) {
+            case LIBEC_VERSION_MISMATCH:
+                orig_libec_ver = ((fragment_header_t*)cur_frag)->libec_version;
+                ((fragment_header_t*)cur_frag)->libec_version = orig_libec_ver + 1;
+                break;
+            case MAGIC_MISMATCH:
+                ((fragment_header_t*)cur_frag)->magic = 0;
+                break;
+            case BACKEND_ID_MISMATCH:
+                orig_be_id = ((fragment_header_t*)cur_frag)->meta.backend_id;
+                ((fragment_header_t*)cur_frag)->meta.backend_id = orig_be_id + 1;
+                break;
+            case BACKEND_VERSION_MISMATCH:
+                orig_be_ver = ((fragment_header_t*)cur_frag)->meta.backend_version;
+                ((fragment_header_t*)cur_frag)->meta.backend_version = orig_be_ver + 1;
+                break;
+            default:
+                assert(false);
+        }
+        rc = is_invalid_fragment(desc, avail_frags[i]);
+        assert(rc == 1);
+        //heal fragment
+        switch (scenario) {
+            case LIBEC_VERSION_MISMATCH:
+                ((fragment_header_t*)cur_frag)->libec_version = orig_libec_ver;
+                break;
+            case MAGIC_MISMATCH:
+                ((fragment_header_t*)cur_frag)->magic = LIBERASURECODE_FRAG_HEADER_MAGIC;
+                break;
+            case BACKEND_ID_MISMATCH:
+                ((fragment_header_t*)cur_frag)->meta.backend_id = orig_be_id;
+                break;
+            case BACKEND_VERSION_MISMATCH:
+                ((fragment_header_t*)cur_frag)->meta.backend_version = orig_be_ver;
+                break;
+            default:
+                break;
+        }
+    }
+    liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
+    free(orig_data);
+    free(skip);
+}
+static void test_verify_stripe_metadata_libec_mismatch(
+        const ec_backend_id_t be_id, struct ec_args *args)
+{
+    verify_fragment_metadata_mismatch_impl(be_id, args, LIBEC_VERSION_MISMATCH);
+}
+
+static void test_verify_stripe_metadata_magic_mismatch(
+        const ec_backend_id_t be_id, struct ec_args *args)
+{
+    verify_fragment_metadata_mismatch_impl(be_id, args, MAGIC_MISMATCH);
+}
+
+static void test_verify_stripe_metadata_be_id_mismatch(
+        const ec_backend_id_t be_id, struct ec_args *args)
+{
+    verify_fragment_metadata_mismatch_impl(be_id, args, BACKEND_ID_MISMATCH);
+}
+
+static void test_verify_stripe_metadata_be_ver_mismatch(
+        const ec_backend_id_t be_id, struct ec_args *args)
+{
+    verify_fragment_metadata_mismatch_impl(be_id, args, BACKEND_VERSION_MISMATCH);
+}
+
+
+//static void test_verify_str
+
 struct testcase testcases[] = {
     {"test_create_backend_invalid_args",
         test_create_backend_invalid_args,
@@ -941,9 +1203,13 @@ struct testcase testcases[] = {
     {"test_verify_stripe_metadata_invalid_args",
         test_verify_stripe_metadata_invalid_args,
         EC_BACKENDS_MAX, CHKSUM_TYPES_MAX,
-        .skip = true}, //EDL, liberasurecode_verify_stripe_metadata is not implemented at the moment
+        .skip = false},
     {"test_fragments_needed_invalid_args",
         test_fragments_needed_invalid_args,
+        EC_BACKENDS_MAX, CHKSUM_TYPES_MAX,
+        .skip = false},
+    {"test_get_fragment_partition",
+        test_get_fragment_partition,
         EC_BACKENDS_MAX, CHKSUM_TYPES_MAX,
         .skip = false},
     // NULL backend test
@@ -993,7 +1259,7 @@ struct testcase testcases[] = {
         EC_BACKEND_FLAT_XOR_HD, CHKSUM_NONE,
         .skip = false},
     {"test_fragments_needed_flat_xor_hd",
-        test_fragments_needed, 
+        test_fragments_needed,
         EC_BACKEND_FLAT_XOR_HD, CHKSUM_NONE,
         .skip = false},
     {"test_get_fragment_metadata_flat_xor_hd",
@@ -1002,6 +1268,26 @@ struct testcase testcases[] = {
         .skip = false},
     {"test_get_fragment_metadata_flat_xor_hd_crc32",
         test_get_fragment_metadata,
+        EC_BACKEND_FLAT_XOR_HD, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata",
+        test_verify_stripe_metadata,
+        EC_BACKEND_FLAT_XOR_HD, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_libec_mismatch",
+        test_verify_stripe_metadata_libec_mismatch,
+        EC_BACKEND_FLAT_XOR_HD, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_magic_mismatch",
+        test_verify_stripe_metadata_magic_mismatch,
+        EC_BACKEND_FLAT_XOR_HD, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_be_id_mismatch",
+        test_verify_stripe_metadata_be_id_mismatch,
+        EC_BACKEND_FLAT_XOR_HD, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_be_ver_mismatch",
+        test_verify_stripe_metadata_be_ver_mismatch,
         EC_BACKEND_FLAT_XOR_HD, CHKSUM_CRC32,
         .skip = false},
     // Jerasure RS Vand backend tests
@@ -1034,7 +1320,7 @@ struct testcase testcases[] = {
         EC_BACKEND_JERASURE_RS_VAND, CHKSUM_NONE,
         .skip = false},
     {"test_fragments_needed_jerasure_rs_vand",
-        test_fragments_needed, 
+        test_fragments_needed,
         EC_BACKEND_JERASURE_RS_VAND, CHKSUM_NONE,
         .skip = false},
     {"test_get_fragment_metadata_jerasure_rs_vand",
@@ -1043,6 +1329,26 @@ struct testcase testcases[] = {
         .skip = false},
     {"test_get_fragment_metadata_jerasure_rs_vand_crc32",
         test_get_fragment_metadata,
+        EC_BACKEND_JERASURE_RS_VAND, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata",
+        test_verify_stripe_metadata,
+        EC_BACKEND_JERASURE_RS_VAND, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_libec_mismatch",
+         test_verify_stripe_metadata_libec_mismatch,
+         EC_BACKEND_JERASURE_RS_VAND, CHKSUM_CRC32,
+         .skip = false},
+    {"test_verify_stripe_metadata_magic_mismatch",
+          test_verify_stripe_metadata_magic_mismatch,
+          EC_BACKEND_JERASURE_RS_VAND, CHKSUM_CRC32,
+         .skip = false},
+    {"test_verify_stripe_metadata_be_id_mismatch",
+         test_verify_stripe_metadata_be_id_mismatch,
+         EC_BACKEND_JERASURE_RS_VAND, CHKSUM_CRC32,
+         .skip = false},
+    {"test_verify_stripe_metadata_be_ver_mismatch",
+        test_verify_stripe_metadata_be_ver_mismatch,
         EC_BACKEND_JERASURE_RS_VAND, CHKSUM_CRC32,
         .skip = false},
     // Jerasure RS Cauchy backend tests
@@ -1075,7 +1381,7 @@ struct testcase testcases[] = {
         EC_BACKEND_JERASURE_RS_CAUCHY, CHKSUM_NONE,
         .skip = false},
     {"test_fragments_needed_jerasure_rs_cauchy",
-        test_fragments_needed, 
+        test_fragments_needed,
         EC_BACKEND_JERASURE_RS_CAUCHY, CHKSUM_NONE,
         .skip = false},
     {"test_get_fragment_metadata_jerasure_rs_cauchy",
@@ -1084,6 +1390,26 @@ struct testcase testcases[] = {
         .skip = false},
     {"test_get_fragment_metadata_jerasure_rs_cauchy_crc32",
         test_get_fragment_metadata,
+        EC_BACKEND_JERASURE_RS_CAUCHY, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata",
+        test_verify_stripe_metadata,
+        EC_BACKEND_JERASURE_RS_CAUCHY, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_libec_mismatch",
+         test_verify_stripe_metadata_libec_mismatch,
+         EC_BACKEND_JERASURE_RS_CAUCHY, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_magic_mismatch",
+         test_verify_stripe_metadata_magic_mismatch,
+         EC_BACKEND_JERASURE_RS_CAUCHY, CHKSUM_CRC32,
+         .skip = false},
+    {"test_verify_stripe_metadata_be_id_mismatch",
+         test_verify_stripe_metadata_be_id_mismatch,
+         EC_BACKEND_JERASURE_RS_CAUCHY, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_be_ver_mismatch",
+        test_verify_stripe_metadata_be_ver_mismatch,
         EC_BACKEND_JERASURE_RS_CAUCHY, CHKSUM_CRC32,
         .skip = false},
     // ISA-L tests
@@ -1116,12 +1442,89 @@ struct testcase testcases[] = {
         EC_BACKEND_ISA_L_RS_VAND, CHKSUM_NONE,
         .skip = false},
     {"test_fragments_needed_isa_l",
-        test_fragments_needed, 
+        test_fragments_needed,
         EC_BACKEND_ISA_L_RS_VAND, CHKSUM_NONE,
         .skip = false},
     {"test_get_fragment_metadata_isa_l",
         test_get_fragment_metadata,
         EC_BACKEND_ISA_L_RS_VAND, CHKSUM_NONE,
+        .skip = false},
+    {"test_verify_stripe_metadata",
+        test_verify_stripe_metadata,
+        EC_BACKEND_ISA_L_RS_VAND, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_libec_mismatch",
+        test_verify_stripe_metadata_libec_mismatch,
+        EC_BACKEND_ISA_L_RS_VAND, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_magic_mismatch",
+        test_verify_stripe_metadata_magic_mismatch,
+        EC_BACKEND_ISA_L_RS_VAND, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_be_id_mismatch",
+        test_verify_stripe_metadata_be_id_mismatch,
+        EC_BACKEND_ISA_L_RS_VAND, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_be_ver_mismatch",
+        test_verify_stripe_metadata_be_ver_mismatch,
+        EC_BACKEND_ISA_L_RS_VAND, CHKSUM_CRC32,
+        .skip = false},
+    // shss tests
+    {"create_and_destroy_backend",
+        test_create_and_destroy_backend,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"simple_encode_shss",
+        test_simple_encode_decode,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"decode_with_missing_data_shss",
+        test_decode_with_missing_data,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"decode_with_missing_multi_data_shss",
+        test_decode_with_missing_multi_data,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"decode_with_missing_multi_parity_shss",
+        test_decode_with_missing_multi_parity,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"test_decode_with_missing_multi_data_parity_shss",
+        test_decode_with_missing_multi_data_parity,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"simple_reconstruct_shss",
+        test_simple_reconstruct,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"test_fragments_needed_shss",
+        test_fragments_needed,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"test_get_fragment_metadata_shss",
+        test_get_fragment_metadata,
+        EC_BACKEND_SHSS, CHKSUM_NONE,
+        .skip = false},
+    {"test_verify_stripe_metadata",
+        test_verify_stripe_metadata,
+        EC_BACKEND_SHSS, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_libec_mismatch",
+        test_verify_stripe_metadata_libec_mismatch,
+        EC_BACKEND_SHSS, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_magic_mismatch",
+        test_verify_stripe_metadata_magic_mismatch,
+        EC_BACKEND_SHSS, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_be_id_mismatch",
+        test_verify_stripe_metadata_be_id_mismatch,
+        EC_BACKEND_SHSS, CHKSUM_CRC32,
+        .skip = false},
+    {"test_verify_stripe_metadata_be_ver_mismatch",
+        test_verify_stripe_metadata_be_ver_mismatch,
+        EC_BACKEND_SHSS, CHKSUM_CRC32,
         .skip = false},
     { NULL, NULL, 0, 0, false },
 };

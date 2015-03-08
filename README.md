@@ -10,7 +10,14 @@ Highlights
 
  * Unified Erasure Coding interface for common storage workloads.
 
- * Pluggable Erasure Code backends - As of v1.0-rc1, liberasurecode supports 'Jerasure' (Reed-Solomon, Cauchy), 'ISA-L' (Intel Storage Acceleration Library), 'Flat XOR HD' backends.  A template 'NULL' backend is implemented to help future backend writers. 
+ * Pluggable Erasure Code backends - As of v1.0, liberasurecode supports the following backends:
+
+      - 'Jerasure' - Erasure Coding library that supports Reed-Solomon, Cauchy backends [1]
+      - 'ISA-L' - Intel Storage Acceleration Library - SIMD accelerated Erasure Coding backends [2]
+      - 'SHSS' - NTT Lab Japan's hybrid Erasure Coding backend [4]
+      - 'Flat XOR HD' - built-in to liberasurecode, based on [3]
+      - 'NULL' template backend implemented to help future backend writers
+
 
  * True 'plugin' architecture - liberasurecode uses Dynamically Loaded (DL) libraries to realize a true 'plugin' architecture.  This also allows one to build liberasurecode indepdendent of the Erasure Code backend libraries.
 
@@ -37,62 +44,6 @@ Active Users
 
 liberasurecode API Definition
 =============================
-----
-
-Backend Support
----------------
-
-``` c
-
-typedef enum {
-    EC_BACKEND_NULL                 = 0, /* "null" */
-    EC_BACKEND_JERASURE_RS_VAND     = 1, /* "jerasure_rs_vand" */
-    EC_BACKEND_JERASURE_RS_CAUCHY   = 2, /* "jerasure_rs_cauchy" */
-    EC_BACKEND_FLAT_XOR_HD          = 3, /* "flat_xor_hd */
-    EC_BACKEND_ISA_L_RS_VAND        = 4, /* "isa_l_rs_vand */
-    EC_BACKENDS_MAX,
-} ec_backend_id_t;
-
-```
-
-----
-
-User Arguments
---------------
-
-``` c
-
-/**
- * Common and backend-specific args
- * to be passed to liberasurecode_instance_create()
- */
-struct ec_args {
-    int k;                  /* number of data fragments */
-    int m;                  /* number of parity fragments */
-    int w;                  /* word size, in bits (optional) */
-    int hd;                 /* hamming distance (=m for Reed-Solomon) */
-
-    union {
-        struct {
-            uint64_t arg1;  /* sample arg */
-        } null_args;        /* args specific to the null codes */
-        struct {
-            uint64_t x, y;  /* reserved for future expansion */
-            uint64_t z, a;  /* reserved for future expansion */
-        } reserved;
-    } priv_args1;
-
-    void *priv_args2;       /** flexible placeholder for
-                              * future backend args */
-    ec_checksum_type_t ct;  /* fragment checksum type */
-};
-
-```
-
----
-
-User-facing API Functions
--------------------------
 
 ``` c
 
@@ -178,6 +129,7 @@ int liberasurecode_encode_cleanup(int desc, char **encoded_data,
  * @param fragments - erasure encoded fragments (> = k)
  * @param num_fragments - number of fragments being passed in
  * @param fragment_len - length of each fragment (assume they are the same)
+ * @param force_metadata_checks - force fragment metadata checks (default: 0)
  * @param out_data - _output_ pointer to decoded data
  * @param out_data_len - _output_ length of decoded output
  *          (both output data pointers are allocated by liberasurecode,
@@ -189,6 +141,7 @@ int liberasurecode_encode_cleanup(int desc, char **encoded_data,
 int liberasurecode_decode(int desc,
         char **available_fragments,                     /* input */
         int num_fragments, uint64_t fragment_len,       /* input */
+        int force_metadata_checks,                      /* input */
         char **out_data, uint64_t *out_data_len);       /* output */
 
 /**
@@ -255,7 +208,6 @@ Erasure Code Fragment Checksum Types Supported
 typedef enum {
     CHKSUM_NONE                     = 0, /* "none" (default) */
     CHKSUM_CRC32                    = 1, /* "crc32" */
-    CHKSUM_MD5                      = 2, /* "md5" */
     CHKSUM_TYPES_MAX,
 } ec_checksum_type_t;
 
@@ -266,33 +218,50 @@ Erasure Code Fragment Checksum API
 
 ``` c
 
-struct
+struct __attribute__((__packed__))
 fragment_metadata
 {
     uint32_t    idx;                /* 4 */
     uint32_t    size;               /* 4 */
+    uint32_t    frag_backend_metadata_size;    /* 4 */
     uint64_t    orig_data_size;     /* 8 */
     uint8_t     chksum_type;        /* 1 */
-    uint32_t    chksum[LIBERASURECODE_MAX_CHECKSUM_LEN]; /* 16 */
+    uint32_t    chksum[LIBERASURECODE_MAX_CHECKSUM_LEN]; /* 32 */
     uint8_t     chksum_mismatch;    /* 1 */
+    uint8_t     backend_id;         /* 1 */
+    uint32_t    backend_version;    /* 4 */
 } fragment_metadata_t;
 
+#define FRAGSIZE_2_BLOCKSIZE(fragment_size) \
+    (fragment_size - sizeof(fragment_header_t))
 
 /**
  * Get opaque metadata for a fragment.  The metadata is opaque to the
  * client, but meaningful to the underlying library.  It is used to verify
  * stripes in verify_stripe_metadata().
  *
- * @param desc - liberasurecode descriptor/handle
- *        from liberasurecode_instance_create()
  * @param fragment - fragment data pointer
  * @param fragment_metadata - pointer to allocated buffer of size at least
  *        sizeof(struct fragment_metadata) to hold fragment metadata struct
  *
  * @return 0 on success, non-zero on error
  */
-int liberasurecode_get_fragment_metadata(int desc,
-        char *fragment, fragment_metadata_t *fragment_metadata);
+//EDL: This needs to be implemented
+int liberasurecode_get_fragment_metadata(char *fragment,
+        fragment_metadata_t *fragment_metadata);
+
+/**
+* Verify that the specified pointer points to a well formed fragment that can
+* be processed by both this instance of liberasurecode and the specified
+* backend.
+*
+* @param desc - liberasurecode descriptor/handle
+*        from liberasurecode_instance_create()
+* @param fragment - fragment to verify
+*
+* @return 1 if fragment validation fails, 0 otherwise.
+*/
+int is_invalid_fragment(int desc, char *fragment);
 
 /**
  * Verify a subset of fragments generated by encode()
@@ -306,6 +275,8 @@ int liberasurecode_get_fragment_metadata(int desc,
  */
 int liberasurecode_verify_stripe_metadata(int desc,
         char **fragments, int num_fragments);
+
+/* ==~=*=~===~=*=~==~=*=~== liberasurecode Helpers ==~*==~=*=~==~=~=*=~==~= */
 
 /**
  * This computes the aligned size of a buffer passed into 
@@ -333,24 +304,21 @@ int liberasurecode_get_aligned_data_size(int desc, uint64_t data_len);
  */
 int liberasurecode_get_minimum_encode_size(int desc);
 
+/**
+ * This will return the fragment size, which is each fragment data
+ * length the backend will allocate when encoding.
+ *
+ * @param desc - liberasurecode descriptor/handle
+ *        from liberasurecode_instance_create()
+ * @param data_len - original data length in bytes
+ *
+ * @return fragment size - sizeof(fragment_header) + size
+ *                         + frag_backend_metadata_size
+ */
+int liberasurecode_get_fragment_size(int desc, int data_len);
 ```
 ----
 
-Error Codes
------------
-
-``` c
-
-/* Error codes */
-typedef enum {
-    EBACKENDNOTSUPP  = 200, /* EC Backend not supported by the library */
-    EECMETHODNOTIMPL = 201, /* EC Backend method not implemented */
-    EBACKENDINITERR  = 202, /* EC Backend could not be initialized */
-    EBACKENDINUSE    = 203, /* EC Backend in use (locked) */
-} LIBERASURECODE_ERROR_CODES;
-
-```
----
 
 Build and Install
 =================
@@ -382,12 +350,16 @@ Code organization
  |   |                                    (frontend + backend)
  |   |-- backends
  |   |   +-- null
- |   |       +--- null.c              --> 'null' erasure code backend
+ |   |       +--- null.c              --> 'null' erasure code backend (template backend)
  |   |   +-- xor
- |   |       +--- flat_xor_hd.c       --> 'flat_xor_hd' erasure code backend
+ |   |       +--- flat_xor_hd.c       --> 'flat_xor_hd' erasure code backend (built-in)
  |   |   +-- jerasure                 
- |   |       +-- jerasure_rs_cauchy.c --> 'jerasure_rs_vand' erasure code backend
- |   |       +-- jerasure_rs_vand.c   --> 'jerasure_rs_cauchy' erasure code backend
+ |   |       +-- jerasure_rs_cauchy.c --> 'jerasure_rs_vand' erasure code backend (jerasure.org)
+ |   |       +-- jerasure_rs_vand.c   --> 'jerasure_rs_cauchy' erasure code backend (jerasure.org)
+ |   |   +-- isa-l
+ |   |       +-- isa_l_rs_vand.c      --> 'isa_l_rs_vand' erasure code backend (Intel)
+ |   |   +-- shss
+ |   |       +-- shss.c               --> 'shss' erasure code backend (NTT Labs)
  |   |
  |   |-- builtin
  |   |   +-- xor_codes                --> XOR HD code backend, built-in erasure
@@ -421,3 +393,14 @@ Code organization
  +-- ChangeLog
 ```
 ---
+
+References
+==========
+
+ [1] Jerasure, C library that supports erasure coding in storage applications, http://jerasure.org
+
+ [2] Intel(R) Storage Acceleration Library (Open Source Version), https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
+
+ [3] Greenan, Kevin M et al, "Flat XOR-based erasure codes in storage systems", http://www.kaymgee.com/Kevin_Greenan/Publications_files/greenan-msst10.pdf
+
+ [4] Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>, Ryuta Kon <kon.ryuta@po.ntts.co.jp>, "NTT SHSS Erasure Coding backend"

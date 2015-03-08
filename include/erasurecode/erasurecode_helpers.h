@@ -45,12 +45,12 @@
 
 typedef struct __attribute__((__packed__)) fragment_header_s
 {
-    fragment_metadata_t meta;   /* 55 bytes */
+    fragment_metadata_t meta;   /* 59 bytes */
     uint32_t            magic;  /*  4 bytes */
     uint32_t            libec_version; /* 4 bytes */
     // We must be aligned to 16-byte boundaries
     // So, size this array accordingly
-    uint8_t             aligned_padding[1];
+    uint8_t             aligned_padding[13];
 } fragment_header_t;
 
 /* ==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~==~=*=~== */
@@ -126,6 +126,8 @@ int get_aligned_data_size(ec_backend_t instance, int data_len);
 char *get_data_ptr_from_fragment(char *buf);
 int get_data_ptr_array_from_fragments(char **data_array, char **fragments,
         int num_fragments);
+int get_fragment_ptr_array_from_data(char **frag_array, char **data,
+        int num_data);
 char *get_fragment_ptr_from_data_novalidate(char *buf);
 char *get_fragment_ptr_from_data(char *buf);
 uint64_t get_fragment_size(char *buf);
@@ -133,11 +135,13 @@ int set_fragment_idx(char *buf, int idx);
 int get_fragment_idx(char *buf);
 int set_fragment_payload_size(char *buf, int size);
 int get_fragment_payload_size(char *buf);
+int set_fragment_backend_metadata_size(char *buf, int size);
+int get_fragment_backend_metadata_size(char *buf);
+int get_fragment_buffer_size(char *buf);
 int set_orig_data_size(char *buf, int orig_data_size);
 int get_orig_data_size(char *buf);
-int validate_fragment(char *buf);
 int set_checksum(ec_checksum_type_t ct, char *buf, int blocksize);
-int get_checksum(char *buf);
+int get_checksum(char *buf); //TODO implement this
 int set_libec_version(char *fragment);
 int get_libec_version(char *fragment, uint32_t *ver);
 int set_backend_id(char *buf, ec_backend_id_t id);
