@@ -5,6 +5,7 @@ liberasurecode (1.0-1) unstable; urgency=medium
   * Added a watch file.
   * Added a patch to not include emmintrin.h so that the lib can build on
     non-x86 platforms (Closes: #779958).
+  * Fixed debian/copyright after FTP masters comments.
 
  -- Thomas Goirand <zigo@debian.org>  Sun, 08 Mar 2015 16:14:24 +0100
 
