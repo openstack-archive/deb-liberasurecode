@@ -8,7 +8,7 @@ Build-Depends: autoconf-archive,
                dh-autoreconf,
                libgf-complete-dev,
                libjerasure-dev
-Standards-Version: 3.9.5
+Standards-Version: 3.9.6
 Homepage: https://bitbucket.org/tsg-/liberasurecode/
 Vcs-Git: git://anonscm.debian.org/openstack/liberasurecode.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/liberasurecode.git;a=summary
