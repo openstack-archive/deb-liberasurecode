@@ -2,6 +2,7 @@ liberasurecode (1.0-1) unstable; urgency=medium
 
   * New upstream release.
   * Standards-Version is now 3.9.6.
+  * Added a watch file.
 
  -- Thomas Goirand <zigo@debian.org>  Sun, 08 Mar 2015 16:14:24 +0100
 
