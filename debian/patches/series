@@ -1,1 +1,2 @@
 disable-sse.patch
+Do-not-include-emmintrin.h.patch

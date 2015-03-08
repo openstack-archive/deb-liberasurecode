@@ -1,0 +1,18 @@
+Description: Do not include emmintrin.h
+ The emmintrin.h is only available on x86* platforms, so let's disable it in
+ Debian so that the lib can build on any platforms.
+Author: Thomas Goirand <zigo@debian.org>
+Forwarded: no
+Last-Update: 2015-03-08
+
+--- liberasurecode-1.0.orig/src/builtin/xor_codes/xor_code.c
++++ liberasurecode-1.0/src/builtin/xor_codes/xor_code.c
+@@ -22,7 +22,7 @@
+  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-#include <emmintrin.h>  //SSE2
++//#include <emmintrin.h>  //SSE2
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
