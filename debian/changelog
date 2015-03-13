@@ -1,9 +1,17 @@
+liberasurecode (1.0.5-2) unstable; urgency=medium
+
+  * Adds Breaks: liberasurecode0, Replaces: liberasurecode0. Note that I
+    know this shouldn't really be necessary, and that it could be an issue
+    for upgrades, but at the same time, I know there's no user of this package
+    yet since PyECLib isn't used by Swift & Ceph yet.
+
+ -- Thomas Goirand <zigo@debian.org>  Fri, 13 Mar 2015 23:17:04 +0000
+
 liberasurecode (1.0.5-1) unstable; urgency=medium
 
   * New upstream release.
   * Renamed liberasurecode0 into liberasurecode1 as upstream bumped the
     SONAME.
-  * Adds Breaks: liberasurecode0, Replaces: liberasurecode0.
 
  -- Thomas Goirand <zigo@debian.org>  Fri, 13 Mar 2015 23:51:34 +0100
 
