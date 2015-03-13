@@ -16,7 +16,7 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/liberasurecode.git;a=
 Package: liberasurecode-dev
 Section: libdevel
 Architecture: any
-Depends: liberasurecode0 (= ${binary:Version}),
+Depends: liberasurecode1 (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Description: support of multiple erasure code backends - development files
@@ -27,7 +27,7 @@ Description: support of multiple erasure code backends - development files
  This package contains the development files needed to build against the shared
  library.
 
-Package: liberasurecode0
+Package: liberasurecode1
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: support of multiple erasure code backends - shared library
