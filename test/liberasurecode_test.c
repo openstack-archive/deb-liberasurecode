@@ -58,9 +58,9 @@ struct ec_args null_args = {
 };
 
 struct ec_args flat_xor_hd_args = {
-    .k = 10,
-    .m = 6,
-    .hd = 4,
+    .k = 3,
+    .m = 3,
+    .hd = 3,
     .ct = CHKSUM_NONE,
 };
 
@@ -175,6 +175,31 @@ int *create_skips_array(struct ec_args *args, int skip)
         buf[skip] = 1;
     }
     return buf;
+}
+
+static int create_fake_frags_no_meta(char ***array, int num_frags,
+                                     const char *data, int data_len)
+{
+    int _num_frags = 0;
+    int i = 0;
+    char **ptr = NULL;
+
+    *array = malloc(num_frags * sizeof(char *));
+    if (array == NULL) {
+        _num_frags = -1;
+        goto out;
+    }
+
+    // add data and parity frags
+    ptr = *array;
+    for (i = 0; i < num_frags; i++) {
+        *ptr = (char *) malloc(data_len);
+        strncpy(*ptr++, data, data_len);
+        _num_frags++;
+    }
+
+out:
+    return _num_frags;
 }
 
 static int create_frags_array(char ***array,
@@ -391,6 +416,7 @@ static void test_decode_invalid_args()
     int *skips = create_skips_array(&null_args, -1);
     char *decoded_data = NULL;
     uint64_t decoded_data_len = 0;
+    const char *fake_data = " ";
 
     desc = liberasurecode_instance_create(EC_BACKEND_NULL, &null_args);
     if (-EBACKENDNOTAVAIL == desc) {
@@ -398,12 +424,40 @@ static void test_decode_invalid_args()
         return;
     }
     assert(desc > 0);
+
+    // test with invalid fragments (no metadata headers)
+    num_avail_frags = create_fake_frags_no_meta(&avail_frags, (null_args.k +
+                                                null_args.m),
+                                                fake_data, strlen(fake_data));
+    assert(num_avail_frags > 0);
+
+    rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
+                               strlen(fake_data), 1,
+                               &decoded_data, &decoded_data_len);
+    // force_metadata_checks results in EINSUFFFRAGS
+    assert(rc == -EINSUFFFRAGS);
+
+    rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
+                               strlen(fake_data), 0,
+                               &decoded_data, &decoded_data_len);
+    assert(rc == -EBADHEADER);
+
+    // test with num_fragments < (k)
+    num_avail_frags = create_fake_frags_no_meta(&avail_frags, (null_args.k - 1),
+                                                " ", 1);
+    assert(num_avail_frags > 0);
+    rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
+                               strlen(fake_data), 1,
+                               &decoded_data, &decoded_data_len);
+    assert(rc == -EINSUFFFRAGS);
+
     rc = liberasurecode_encode(desc, orig_data, orig_data_size,
             &encoded_data, &encoded_parity, &encoded_fragment_len);
-    assert(0 == rc);
+    assert(rc == 0);
 
     num_avail_frags = create_frags_array(&avail_frags, encoded_data,
                                          encoded_parity, &null_args, skips);
+    assert(num_avail_frags > 0);
 
     rc = liberasurecode_decode(-1, avail_frags, num_avail_frags,
                                encoded_fragment_len, 1,
@@ -698,7 +752,7 @@ static void encode_decode_test_impl(const ec_backend_id_t be_id,
 
     num_avail_frags = create_frags_array(&avail_frags, encoded_data,
                                          encoded_parity, args, skip);
-    assert(num_avail_frags != -1);
+    assert(num_avail_frags > 0);
     rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
                                encoded_fragment_len, 1,
                                &decoded_data, &decoded_data_len);
@@ -720,6 +774,17 @@ static void encode_decode_test_impl(const ec_backend_id_t be_id,
     free(avail_frags);
 }
 
+/**
+ * Note: this test will attempt to reconstruct a single fragment when
+ * one or more other fragments are missing (specified by skip).  
+ *
+ * For example, if skip is [0, 0, 0, 1, 0, 0] and we are reconstructing
+ * fragment 5, then it will test the reconstruction of fragment 5 when 3
+ * and 5 are assumed unavailable.
+ *
+ * We only mark at most 2 as unavailable, as we cannot guarantee every situation
+ * will be able to habndle 3 failures.
+ */
 static void reconstruct_test_impl(const ec_backend_id_t be_id,
                                  struct ec_args *args,
                                  int *skip)
@@ -748,15 +813,24 @@ static void reconstruct_test_impl(const ec_backend_id_t be_id,
     rc = liberasurecode_encode(desc, orig_data, orig_data_size,
             &encoded_data, &encoded_parity, &encoded_fragment_len);
     assert(rc == 0);
-    num_avail_frags = create_frags_array(&avail_frags, encoded_data,
-                                             encoded_parity, args, skip);
     out = malloc(encoded_fragment_len);
     assert(out != NULL);
     for (i = 0; i < num_fragments; i++) {
-        if (skip[i] == 0) {
-            continue;
-        }
         char *cmp = NULL;
+        // If the current fragment was not chosen as fragments to skip,
+        // remove it and the chosen fragments to skip from the available list
+        // and reset its state
+        if (skip[i] == 0) {
+            skip[i] = 1;
+            num_avail_frags = create_frags_array(&avail_frags, encoded_data,
+                                             encoded_parity, args, skip);
+            skip[i] = 0;
+        // Do not reset the skip state if the fragment was chosen as a fragment
+        // to skip for this invocation of the test
+        } else {
+            num_avail_frags = create_frags_array(&avail_frags, encoded_data,
+                                             encoded_parity, args, skip);
+        }
         if (i < args->k) {
             cmp = encoded_data[i];
         }
