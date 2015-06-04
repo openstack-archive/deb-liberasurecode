@@ -1,3 +1,9 @@
+liberasurecode (1.0.7-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 04 Jun 2015 10:15:05 +0200
+
 liberasurecode (1.0.5-2) unstable; urgency=medium
 
   * Adds Breaks: liberasurecode0, Replaces: liberasurecode0. Note that I
