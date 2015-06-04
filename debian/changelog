@@ -1,6 +1,7 @@
 liberasurecode (1.0.7-1) unstable; urgency=medium
 
   * New upstream release.
+  * Removed debian/patches/Do-not-include-emmintrin.h.patch now not needed.
 
  -- Thomas Goirand <zigo@debian.org>  Thu, 04 Jun 2015 10:15:05 +0200
 
