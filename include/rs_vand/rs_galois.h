@@ -1,5 +1,5 @@
-/* * Copyright (c) 2013, Kevin Greenan (kmgreen2@gmail.com)
- * All rights reserved.
+/* 
+ * Copyright 2015 Kevin M Greenan
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -20,45 +20,26 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * vi: set noai tw=79 ts=4 sw=4:
  */
 
-#ifndef _ALG_SIG_H
-#define _ALG_SIG_H
+// DISCLAIMER: This is a totally basic implementation of RS used if a user does not
+// want to install one of the supported backends, such as Jerasure and ISA-L.
+// This is not expected to perform as well as the other supported backends,
+// but does not make any assumptions about the host system.  Using a library
+// like Jerasure with GF-Complete will give users the ability to tune to their
+// architecture (Intel or ARM), CPU and memory (lots of options).
 
-typedef int (*galois_single_multiply_func)(int, int, int);
-typedef void (*galois_uninit_field_func)(int);
+// We are only implementing w=16 here.  If you want to use something
+// else, then use Jerasure with GF-Complete or ISA-L.
+#define PRIM_POLY 0x1100b
+#define FIELD_SIZE (1 << 16)
+#define GROUP_SIZE (FIELD_SIZE - 1)
 
-struct jerasure_mult_routines {
-  galois_single_multiply_func galois_single_multiply;
-  galois_uninit_field_func galois_uninit_field;
-};
-
-#if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
-#define JERASURE_SONAME "libJerasure.dylib"
-#else
-#define JERASURE_SONAME "libJerasure.so"
-#endif
-
-typedef struct alg_sig_s
-{
-  int gf_w;
-  int sig_len;
-  struct jerasure_mult_routines mult_routines;
-  void *jerasure_sohandle;
-  int *tbl1_l;
-  int *tbl1_r;
-  int *tbl2_l;
-  int *tbl2_r;
-  int *tbl3_l;
-  int *tbl3_r;
-} alg_sig_t;
-
-alg_sig_t *init_alg_sig(int sig_len, int gf_w);
-void destroy_alg_sig(alg_sig_t* alg_sig_handle);
-
-int compute_alg_sig(alg_sig_t* alg_sig_handle, char *buf, int len, char *sig);
-int crc32_build_fast_table();
-int crc32(int crc, const void *buf, int size);
-
-#endif
+void rs_galois_init_tables();
+void rs_galois_deinit_tables();
+int rs_galois_mult(int x, int y);
+int rs_galois_div(int x, int y);
+int rs_galois_inverse(int x);
 

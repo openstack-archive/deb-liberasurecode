@@ -44,6 +44,7 @@ extern struct ec_backend_common backend_jerasure_rs_vand;
 extern struct ec_backend_common backend_jerasure_rs_cauchy;
 extern struct ec_backend_common backend_isa_l_rs_vand;
 extern struct ec_backend_common backend_shss;
+extern struct ec_backend_common backend_liberasurecode_rs_vand;
 
 ec_backend_t ec_backends_supported[] = {
     (ec_backend_t) &backend_null,
@@ -52,6 +53,7 @@ ec_backend_t ec_backends_supported[] = {
     (ec_backend_t) &backend_flat_xor_hd,
     (ec_backend_t) &backend_isa_l_rs_vand,
     (ec_backend_t) &backend_shss,
+    (ec_backend_t) &backend_liberasurecode_rs_vand,
     NULL,
 };
 
@@ -587,7 +589,7 @@ int liberasurecode_decode(int desc,
         goto out;
     }
 
-    missing_idxs = alloc_and_set_buffer(sizeof(char*) * k, -1);
+    missing_idxs = alloc_and_set_buffer(sizeof(char*) * (k + m), -1);
     if (NULL == missing_idxs) {
         log_error("Could not allocate missing_idxs buffer!");
         goto out;
@@ -727,6 +729,7 @@ int liberasurecode_reconstruct_fragment(int desc,
     char **parity = NULL;
     int *missing_idxs = NULL;
     char *fragment_ptr = NULL;
+    int is_destination_missing = 0;
     int k = -1;
     int m = -1;
     int i;
@@ -771,7 +774,7 @@ int liberasurecode_reconstruct_fragment(int desc,
         goto out;
     }
 
-    missing_idxs = alloc_and_set_buffer(sizeof(int*) * k, -1);
+    missing_idxs = alloc_and_set_buffer(sizeof(int*) * (k + m), -1);
     if (NULL == missing_idxs) {
         log_error("Could not allocate missing_idxs buffer!");
         goto out;
@@ -787,6 +790,33 @@ int liberasurecode_reconstruct_fragment(int desc,
     if (ret < 0) {
         log_error("Could not properly partition the fragments!");
         goto out;
+    }
+
+    /*
+     * Odd corner-case: If the caller passes in a destination_idx that
+     * is also included in the available fragments list, we should *not*
+     * try to reconstruct.
+     *
+     * For now, we will log a warning and do nothing.  In the future, we
+     * should probably log and return an error.
+     *
+     */
+    i = 0;
+    while (missing_idxs[i] > -1) {
+        if (missing_idxs[i] == destination_idx) {
+            is_destination_missing = 1;
+        }
+        i++;
+    }
+
+    if (!is_destination_missing) {
+        if (destination_idx < k) {
+            fragment_ptr = data[destination_idx];
+        } else {
+            fragment_ptr = parity[destination_idx - k];
+        }
+        log_warn("Dest idx for reconstruction was supplied as available buffer!");
+        goto destination_available;
     }
 
     /*
@@ -831,6 +861,7 @@ int liberasurecode_reconstruct_fragment(int desc,
                           orig_data_size, blocksize, instance->args.uargs.ct,
                           set_chksum);
 
+destination_available:
     /*
      * Copy the reconstructed fragment to the output buffer
      *

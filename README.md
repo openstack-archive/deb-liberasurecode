@@ -10,8 +10,9 @@ Highlights
 
  * Unified Erasure Coding interface for common storage workloads.
 
- * Pluggable Erasure Code backends - As of v1.0, liberasurecode supports the following backends:
+ * Pluggable Erasure Code backends - As of v1.0.8, liberasurecode supports the following backends:
 
+      - Native, software-only Erasure Coding implementation that supports a Reed-Solomon backend
       - 'Jerasure' - Erasure Coding library that supports Reed-Solomon, Cauchy backends [1]
       - 'ISA-L' - Intel Storage Acceleration Library - SIMD accelerated Erasure Coding backends [2]
       - 'SHSS' - NTT Lab Japan's hybrid Erasure Coding backend [4]
