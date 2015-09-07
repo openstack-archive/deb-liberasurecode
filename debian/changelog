@@ -1,5 +1,6 @@
-liberasurecode (1.0.8-3) UNRELEASED; urgency=medium
+liberasurecode (1.0.8-3) unstable; urgency=medium
 
+  * Team upload.
   * d/p/disable-sse.patch: Strip out liberasurecode specific configuration
     checks which are turning on CPU optimizations that are not supported
     on all CPU variants.
