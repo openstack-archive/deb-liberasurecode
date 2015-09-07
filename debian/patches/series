@@ -1,1 +1,2 @@
 disable-sse.patch
+use-full-soname.patch

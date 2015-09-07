@@ -13,10 +13,6 @@ export HOME=$(CURDIR)
 %:
 	dh $@  --with autoreconf
 
-override_dh_auto_test:
-	#make check
-	echo "Not doing anything for now"
-
 gen-orig-xz:
 	git tag -v $(GIT_TAG) || true
 	if [ ! -f ../$(DEBPKGNAME)_$(VERSION).orig.tar.xz ] ; then \

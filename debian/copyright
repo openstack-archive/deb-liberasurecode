@@ -6,7 +6,7 @@ Files: debian/*
 Copyright: (c) 2014, Thomas Goirand <zigo@debian.org>
 License: BSD-style
 
-Files: src/utils/chksum/crc32.c 
+Files: src/utils/chksum/crc32.c
 Copyright: (c) 1986, Gary S. Brown
 License: crc32-license
 

@@ -1,0 +1,83 @@
+Description: Ensure ec backends can actually be loaded.
+ Use the actual soname rather than the fully unversioned name,
+ ensuring that systems that don't have -dev packages actually work.
+Author: James Page <james.page@ubuntu.com>
+Forwared: no
+
+--- a/src/backends/jerasure/jerasure_rs_vand.c
++++ b/src/backends/jerasure/jerasure_rs_vand.c
+@@ -41,7 +41,7 @@
+ #if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
+ #define JERASURE_RS_VAND_SO_NAME "libJerasure.dylib"
+ #else
+-#define JERASURE_RS_VAND_SO_NAME "libJerasure.so"
++#define JERASURE_RS_VAND_SO_NAME "libJerasure.so.2"
+ #endif
+ 
+ /* Forward declarations */
+--- a/src/backends/jerasure/jerasure_rs_cauchy.c
++++ b/src/backends/jerasure/jerasure_rs_cauchy.c
+@@ -41,7 +41,7 @@
+ #if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
+ #define JERASURE_RS_CAUCHY_SO_NAME "libJerasure.dylib"
+ #else
+-#define JERASURE_RS_CAUCHY_SO_NAME "libJerasure.so"
++#define JERASURE_RS_CAUCHY_SO_NAME "libJerasure.so.2"
+ #endif
+ 
+ /* Forward declarations */
+--- a/src/backends/rs_vand/liberasurecode_rs_vand.c
++++ b/src/backends/rs_vand/liberasurecode_rs_vand.c
+@@ -39,7 +39,7 @@
+ #if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
+ #define LIBERASURECODE_RS_VAND_SO_NAME "liberasurecode_rs_vand.dylib"
+ #else
+-#define LIBERASURECODE_RS_VAND_SO_NAME "liberasurecode_rs_vand.so"
++#define LIBERASURECODE_RS_VAND_SO_NAME "liberasurecode_rs_vand.so.1"
+ #endif
+ 
+ /* Forward declarations */
+--- a/src/backends/xor/flat_xor_hd.c
++++ b/src/backends/xor/flat_xor_hd.c
+@@ -41,7 +41,7 @@
+ #if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
+ #define FLAT_XOR_SO_NAME "libXorcode.dylib"
+ #else
+-#define FLAT_XOR_SO_NAME "libXorcode.so"
++#define FLAT_XOR_SO_NAME "libXorcode.so.1"
+ #endif
+ #define DEFAULT_W 32
+ 
+--- a/src/backends/null/null.c
++++ b/src/backends/null/null.c
+@@ -39,7 +39,7 @@
+ #if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
+ #define NULL_SO_NAME "libnullcode.dylib"
+ #else
+-#define NULL_SO_NAME "libnullcode.so"
++#define NULL_SO_NAME "libnullcode.so.1"
+ #endif
+ /* Forward declarations */
+ struct ec_backend null;
+--- a/src/backends/isa-l/isa_l_rs_vand.c
++++ b/src/backends/isa-l/isa_l_rs_vand.c
+@@ -42,7 +42,7 @@
+ #if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
+ #define ISA_L_RS_VAND_SO_NAME "libisal.dylib"
+ #else
+-#define ISA_L_RS_VAND_SO_NAME "libisal.so"
++#define ISA_L_RS_VAND_SO_NAME "libisal.so.2"
+ #endif
+ 
+ /* Forward declarations */
+--- a/src/backends/shss/shss.c
++++ b/src/backends/shss/shss.c
+@@ -64,7 +64,7 @@ struct shss_descriptor {
+ #if defined(__MACOS__) || defined(__MACOSX__) || defined(__OSX__) || defined(__APPLE__)
+ #define SHSS_SO_NAME "libshss.dylib"
+ #else
+-#define SHSS_SO_NAME "libshss.so"
++#define SHSS_SO_NAME "libshss.so.1"
+ #endif
+ #define DEFAULT_W 128
+ #define METADATA 32
