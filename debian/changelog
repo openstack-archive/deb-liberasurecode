@@ -1,3 +1,11 @@
+liberasurecode (1.0.8-3) UNRELEASED; urgency=medium
+
+  * d/p/disable-sse.patch: Strip out liberasurecode specific configuration
+    checks which are turning on CPU optimizations that are not supported
+    on all CPU variants.
+
+ -- James Page <james.page@ubuntu.com>  Mon, 07 Sep 2015 16:51:05 +0100
+
 liberasurecode (1.0.8-2) unstable; urgency=medium
 
   * Team upload.
