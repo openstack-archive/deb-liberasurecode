@@ -1,5 +1,6 @@
-liberasurecode (1.0.8-2) UNRELEASED; urgency=medium
+liberasurecode (1.0.8-2) unstable; urgency=medium
 
+  * Team upload.
   * Place under PKG OpenStack team maintenance as discussed with
     Thomas.
   * d/p/use-full-soname.patch: Use true sonames when loading backends.
@@ -10,7 +11,7 @@ liberasurecode (1.0.8-2) UNRELEASED; urgency=medium
   * d/control,rules: Add BD on libjerasure2, enable unit test suite
     execution for builtin and jerasure backends.
 
- -- James Page <james.page@ubuntu.com>  Mon, 07 Sep 2015 11:38:41 +0100
+ -- James Page <james.page@ubuntu.com>  Mon, 07 Sep 2015 11:53:47 +0100
 
 liberasurecode (1.0.8-1) unstable; urgency=medium
 
