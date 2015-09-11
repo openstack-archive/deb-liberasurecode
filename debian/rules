@@ -11,7 +11,7 @@ GIT_TAG         ?= $(shell echo '$(VERSION)' | sed -e 's/~/_/')
 export HOME=$(CURDIR)
 
 %:
-	dh $@  --with autoreconf
+	dh $@  --with autoreconf --parallel
 
 gen-orig-xz:
 	git tag -v $(GIT_TAG) || true

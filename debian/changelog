@@ -1,3 +1,9 @@
+liberasurecode (1.0.8-4) UNRELEASED; urgency=medium
+
+  * d/rules: Support parallel builds.
+
+ -- James Page <james.page@ubuntu.com>  Fri, 11 Sep 2015 15:39:31 +0100
+
 liberasurecode (1.0.8-3) unstable; urgency=medium
 
   * Team upload.
