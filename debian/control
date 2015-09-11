@@ -34,6 +34,7 @@ Depends: libjerasure2,
          ${shlibs:Depends},
 Breaks: liberasurecode0,
 Replaces: liberasurecode0,
+Multi-Arch: same
 Description: support of multiple erasure code backends - shared library
  Liberasurecode is an erasure code library which can support multiple erasure
  code 'backends'. The repository includes a Jerasure for Reed-Solomon

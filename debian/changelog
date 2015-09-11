@@ -1,6 +1,7 @@
 liberasurecode (1.0.8-4) UNRELEASED; urgency=medium
 
   * d/rules: Support parallel builds.
+  * d/control: Mark liberasurecode1 as Multi-Arch: same.
 
  -- James Page <james.page@ubuntu.com>  Fri, 11 Sep 2015 15:39:31 +0100
 
