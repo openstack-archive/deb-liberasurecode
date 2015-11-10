@@ -1,9 +1,13 @@
-liberasurecode (1.0.8-4) UNRELEASED; urgency=medium
+liberasurecode (1.1.0-1) unstable; urgency=medium
 
+  [ James Page ]
   * d/rules: Support parallel builds.
   * d/control: Mark liberasurecode1 as Multi-Arch: same.
 
- -- James Page <james.page@ubuntu.com>  Fri, 11 Sep 2015 15:39:31 +0100
+  [ Thomas Goirand ]
+  * New upstream release.
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 10 Nov 2015 11:03:48 +0000
 
 liberasurecode (1.0.8-3) unstable; urgency=medium
 
