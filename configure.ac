@@ -1,7 +1,7 @@
 ################################################################################
 #                           Standard Stuff
 ################################################################################
-AC_INIT(liberasurecode,1.0.8)
+AC_INIT(liberasurecode,1.1.0)
 AC_GNU_SOURCE
 
 AC_PREREQ([2.61])
@@ -14,6 +14,8 @@ AC_CONFIG_HEADER(include/config_liberasurecode.h)
 AM_MAINTAINER_MODE([disable])
 m4_ifndef([AM_SILENT_RULES], [m4_define([AM_SILENT_RULES],[])])
 AM_SILENT_RULES([yes])
+
+AC_PROG_LN_S
 
 dnl Compiling with per-target flags requires AM_PROG_CC_C_O.
 AC_PROG_CC

@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include "erasurecode.h"
 #include "erasurecode_helpers.h"
+#include "erasurecode_helpers_ext.h"
 #include "erasurecode_preprocessing.h"
 #include "erasurecode_backend.h"
 #include "alg_sig.h"
@@ -487,6 +488,15 @@ static void test_create_backend_invalid_args()
         fprintf (stderr, "Backend library not available!\n");
         return;
     }
+    struct ec_args invalid_args = {
+        .k = 100,
+        .m = 100,
+    };
+    desc = liberasurecode_instance_create(EC_BACKEND_NULL, &invalid_args);
+    if (-EBACKENDNOTAVAIL == desc) {
+        fprintf (stderr, "Backend library not available!\n");
+        return;
+    }
     assert(desc < 0);
 }
 
@@ -905,8 +915,11 @@ static void encode_decode_test_impl(const ec_backend_id_t be_id,
     if (-EBACKENDNOTAVAIL == desc) {
         fprintf (stderr, "Backend library not available!\n");
         return;
-    }
-    assert(desc > 0);
+    } else if ((args->k + args->m) > EC_MAX_FRAGMENTS) {
+        assert(-EINVALIDPARAMS == desc);
+        return;
+    } else
+        assert(desc > 0);
 
     orig_data = create_buffer(orig_data_size, 'x');
     assert(orig_data != NULL);
@@ -1316,6 +1329,21 @@ static void test_simple_encode_decode(const ec_backend_id_t be_id,
     free(skip);
 }
 
+static void test_simple_encode_decode_over32()
+{
+    struct ec_args over32_args = {
+        .k = 30,
+        .m = 20,
+    };
+
+    int *skip = create_skips_array(&over32_args, 1);
+    assert(skip != NULL);
+    // should return an error
+    encode_decode_test_impl(EC_BACKEND_JERASURE_RS_VAND,
+                            &over32_args, skip);
+    free(skip);
+}
+
 static void test_simple_reconstruct(const ec_backend_id_t be_id,
                                     struct ec_args *args)
 {
@@ -1593,6 +1621,10 @@ struct testcase testcases[] = {
     {"test_verify_stripe_metadata_be_ver_mismatch",
         test_verify_stripe_metadata_be_ver_mismatch,
         EC_BACKEND_FLAT_XOR_HD, CHKSUM_CRC32,
+        .skip = false},
+    {"test_simple_encode_decode_over32",
+        test_simple_encode_decode_over32,
+        EC_BACKEND_JERASURE_RS_VAND, CHKSUM_CRC32,
         .skip = false},
     // Jerasure RS Vand backend tests
     {"create_and_destroy_backend",
