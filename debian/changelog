@@ -1,3 +1,11 @@
+liberasurecode (1.1.0-2) unstable; urgency=medium
+
+  * Drop manual dependency on libjerasure2. This "manual" dependency should
+    never have been there, as it should be calculated by dh_shlibdeps, and
+    also upstream confirms that this dep shouldn't be there at all anyway.
+
+ -- Thomas Goirand <zigo@debian.org>  Fri, 13 Nov 2015 22:19:29 +0100
+
 liberasurecode (1.1.0-1) unstable; urgency=medium
 
   [ James Page ]
