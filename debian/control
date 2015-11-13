@@ -7,7 +7,6 @@ Build-Depends: autoconf-archive,
                autotools-dev,
                debhelper (>= 9),
                dh-autoreconf,
-               libjerasure2,
 Standards-Version: 3.9.6
 Homepage: https://bitbucket.org/tsg-/liberasurecode/
 Vcs-Git: git://anonscm.debian.org/openstack/liberasurecode.git
@@ -29,8 +28,7 @@ Description: support of multiple erasure code backends - development files
 
 Package: liberasurecode1
 Architecture: any
-Depends: libjerasure2,
-         ${misc:Depends},
+Depends: ${misc:Depends},
          ${shlibs:Depends},
 Breaks: liberasurecode0,
 Replaces: liberasurecode0,
