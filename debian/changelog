@@ -1,3 +1,9 @@
+liberasurecode (1.1.0-3) unstable; urgency=medium
+
+  * Added patch to make the build reproducible (Closes: #806577).
+
+ -- Thomas Goirand <zigo@debian.org>  Wed, 02 Dec 2015 10:18:08 +0100
+
 liberasurecode (1.1.0-2) unstable; urgency=medium
 
   * Drop manual dependency on libjerasure2. This "manual" dependency should

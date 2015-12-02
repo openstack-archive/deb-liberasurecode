@@ -1,2 +1,3 @@
 disable-sse.patch
 use-full-soname.patch
+reproducible-build.patch
