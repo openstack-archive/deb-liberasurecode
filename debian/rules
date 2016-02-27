@@ -9,6 +9,7 @@ DEBPKGNAME      ?= $(shell dpkg-parsechangelog | grep -E ^Source: | cut -d" " -f
 GIT_TAG         ?= $(shell echo '$(VERSION)' | sed -e 's/~/_/')
 
 export HOME=$(CURDIR)
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 %:
 	dh $@  --with autoreconf --parallel

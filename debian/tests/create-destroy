@@ -1,0 +1,39 @@
+#!/bin/sh
+
+set -e
+
+cd "$ADTTMP"
+
+cat <<TEST_END > create-destroy.c
+#include <erasurecode.h>
+
+int main()
+{
+    struct ec_args args;
+    args.k = 2;
+    args.m = 1;
+    args.w = 64;
+
+    // Create
+    int e = liberasurecode_instance_create(EC_BACKEND_LIBERASURECODE_RS_VAND, &args);
+    if (!e) {
+        printf("ERROR: liberasurecode_instance_create: %d", e);
+        return 1;
+    }
+
+    // Destroy
+    int ret = liberasurecode_instance_destroy(e);
+    if (ret) {
+        printf("ERROR: liberasurecode_instance_destroy: %d", ret);
+        return 1;
+    }
+
+    printf("run: OK\n");
+
+    return 0;
+}
+TEST_END
+
+gcc -o create-destroy.bin create-destroy.c -lerasurecode -ldl
+echo "build: OK"
+./create-destroy.bin
