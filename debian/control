@@ -18,7 +18,6 @@ Section: libdevel
 Architecture: any
 Depends: liberasurecode1 (= ${binary:Version}),
          ${misc:Depends},
-         ${shlibs:Depends},
 Description: support of multiple erasure code backends - development files
  Liberasurecode is an erasure code library which can support multiple erasure
  code 'backends'. The repository includes a Jerasure for Reed-Solomon
@@ -31,6 +30,7 @@ Package: liberasurecode1
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
+Suggests: libjerasure2
 Breaks: liberasurecode0,
 Replaces: liberasurecode0,
 Multi-Arch: same
