@@ -1,4 +1,4 @@
-liberasurecode (1.1.0-4) UNRELEASED; urgency=medium
+liberasurecode (1.1.0-4) unstable; urgency=medium
 
   * Added myself as uploader.
   * Added myself to copyright file.
@@ -11,7 +11,7 @@ liberasurecode (1.1.0-4) UNRELEASED; urgency=medium
   * Removed shlibs substitution in dependency from liberasurecode-dev
   * Added Suggests: libjerasure2.
 
- -- Ondřej Nový <novy@ondrej.org>  Sat, 27 Feb 2016 08:55:42 +0100
+ -- Ondřej Nový <novy@ondrej.org>  Sun, 28 Feb 2016 00:08:54 +0100
 
 liberasurecode (1.1.0-3) unstable; urgency=medium
 
