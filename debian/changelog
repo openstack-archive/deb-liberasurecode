@@ -8,7 +8,7 @@ liberasurecode (1.1.0-4) UNRELEASED; urgency=medium
   * Standards-Version is 3.9.7 now (no change).
   * Added header to d/patches/reproducible-build.patch
   * Added Debian tests.
-  * Removed shlibs substitution in dependency from liberasurecode1-dev
+  * Removed shlibs substitution in dependency from liberasurecode-dev
   * Added Suggests: libjerasure2.
 
  -- Ondřej Nový <novy@ondrej.org>  Sat, 27 Feb 2016 08:55:42 +0100
