@@ -1,5 +1,5 @@
 Description: Allow build to be reproducible
-Thomas Goirand <zigo@debian.org>
+Author: Thomas Goirand <zigo@debian.org>
 Forwarded: no
 Last-Update: 2015-12-02
 --- liberasurecode-1.1.0.orig/Makefile.am
