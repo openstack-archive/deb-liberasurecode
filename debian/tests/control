@@ -1,10 +1,8 @@
 Test-Command: debian/tests/create-destroy EC_BACKEND_LIBERASURECODE_RS_VAND
 Depends: @, build-essential
 
-# Not working now
-#Test-Command: debian/tests/create-destroy EC_BACKEND_JERASURE_RS_VAND
-#Depends: @, build-essential, libjerasure-dev
+Test-Command: debian/tests/create-destroy EC_BACKEND_JERASURE_RS_VAND
+Depends: @, build-essential, libjerasure-dev
 
-# Not working now
-#Test-Command: debian/tests/create-destroy EC_BACKEND_ISA_L_RS_VAND
-#Depends: @, build-essential, libisal-dev
+Test-Command: debian/tests/create-destroy EC_BACKEND_ISA_L_RS_VAND
+Depends: @, build-essential, libisal-dev

@@ -11,10 +11,9 @@ cat <<TEST_END > create-destroy.c
 
 int main()
 {
-    struct ec_args args;
+    struct ec_args args = {0};
     args.k = 2;
     args.m = 1;
-    args.w = 64;
 
     // Create
     int e = liberasurecode_instance_create($BACKEND, &args);
@@ -39,3 +38,4 @@ TEST_END
 gcc -o create-destroy.bin create-destroy.c -lerasurecode -ldl
 echo "build: OK"
 ./create-destroy.bin
+rm create-destroy.c create-destroy.bin
