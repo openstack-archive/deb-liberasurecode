@@ -1,9 +1,9 @@
-liberasurecode (1.1.0-5) UNRELEASED; urgency=medium
+liberasurecode (1.1.0-5) unstable; urgency=medium
 
   * Debian tests fixies.
   * Added Suggests: libisal2.
 
- -- Ondřej Nový <novy@ondrej.org>  Sun, 28 Feb 2016 01:14:23 +0100
+ -- Ondřej Nový <novy@ondrej.org>  Tue, 01 Mar 2016 23:10:58 +0100
 
 liberasurecode (1.1.0-4) unstable; urgency=medium
 
