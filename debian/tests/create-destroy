@@ -2,6 +2,8 @@
 
 set -e
 
+BACKEND=$1
+
 cd "$ADTTMP"
 
 cat <<TEST_END > create-destroy.c
@@ -15,16 +17,16 @@ int main()
     args.w = 64;
 
     // Create
-    int e = liberasurecode_instance_create(EC_BACKEND_LIBERASURECODE_RS_VAND, &args);
-    if (!e) {
-        printf("ERROR: liberasurecode_instance_create: %d", e);
+    int e = liberasurecode_instance_create($BACKEND, &args);
+    if (e <= 0) {
+        printf("ERROR: liberasurecode_instance_create: %d\n", e);
         return 1;
     }
 
     // Destroy
     int ret = liberasurecode_instance_destroy(e);
     if (ret) {
-        printf("ERROR: liberasurecode_instance_destroy: %d", ret);
+        printf("ERROR: liberasurecode_instance_destroy: %d\n", ret);
         return 1;
     }
 

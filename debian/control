@@ -30,7 +30,8 @@ Package: liberasurecode1
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-Suggests: libjerasure2
+Suggests: libjerasure2,
+          libisal2,
 Breaks: liberasurecode0,
 Replaces: liberasurecode0,
 Multi-Arch: same

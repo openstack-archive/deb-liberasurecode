@@ -1,6 +1,6 @@
 liberasurecode (1.1.0-5) UNRELEASED; urgency=medium
 
-  * Added build-essential dependency to Debian tests.
+  * Debian tests fixies.
 
  -- Ondřej Nový <novy@ondrej.org>  Sun, 28 Feb 2016 01:14:23 +0100
 
