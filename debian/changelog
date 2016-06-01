@@ -3,6 +3,7 @@ liberasurecode (1.2.0-1) UNRELEASED; urgency=medium
   * New upstream release
   * Upstream moved to official Openstack project
   * Standards-Version is 3.9.8 now (no change)
+  * Removed reproducible-build.patch (Applied upstream)
 
  -- Ondřej Nový <novy@ondrej.org>  Sat, 09 Apr 2016 19:23:28 +0200
 
