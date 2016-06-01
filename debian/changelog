@@ -1,5 +1,6 @@
-liberasurecode (1.1.0-6) UNRELEASED; urgency=medium
+liberasurecode (1.2.0-1) UNRELEASED; urgency=medium
 
+  * New upstream release
   * Standards-Version is 3.9.8 now (no change)
 
  -- Ondřej Nový <novy@ondrej.org>  Sat, 09 Apr 2016 19:23:28 +0200
