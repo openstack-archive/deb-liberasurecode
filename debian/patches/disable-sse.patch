@@ -7,7 +7,7 @@ Description: Disable SSE flags
  yet. Patches to do exactly that would be welcome!
 Author: Thomas Goirand <zigo@debian.org>
 Forwarded: no
-Last-Update: 2014-11-14
+Last-Update: 2016-06-01
 
 --- a/configure.ac
 +++ b/configure.ac
