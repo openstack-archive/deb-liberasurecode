@@ -105,11 +105,12 @@ struct ec_backend_desc {
 struct ec_backend_common {
     ec_backend_id_t             id;                 /* EC backend type */
     char                        name[MAX_LEN];      /* EC backend common name */
-    char                        soname[PATH_MAX];   /* EC backend shared library path */
+    const char                  *soname;            /* EC backend shared library path */
     char                        soversion[MAX_LEN]; /* EC backend shared library version */
 
     struct ec_backend_op_stubs  *ops;               /* EC backend stubs */
-    size_t                      backend_metadata_size;  /* EC backend custom metadata size -
+    size_t                      backend_metadata_size;
+                                                    /* EC backend custom metadata size -
                                                      * backend_metadata_size bytes are added to
                                                      * the fragment size when allocating
                                                      * data/parity fragment buffers */
@@ -141,7 +142,7 @@ int liberasurecode_backend_instance_unregister(ec_backend_t instance);
 
 
 /* Generic dlopen/dlclose routines */
-int liberasurecode_backend_open(ec_backend_t instance);
+void* liberasurecode_backend_open(ec_backend_t instance);
 int liberasurecode_backend_close(ec_backend_t instance);
 
 

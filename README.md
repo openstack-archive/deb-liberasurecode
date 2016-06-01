@@ -10,9 +10,9 @@ Highlights
 
  * Unified Erasure Coding interface for common storage workloads.
 
- * Pluggable Erasure Code backends - As of v1.1.0, liberasurecode supports the following backends:
+ * Pluggable Erasure Code backends - As of v1.1.x, liberasurecode supports the following backends:
 
-      - Native, software-only Erasure Coding implementation that supports a Reed-Solomon backend
+      - 'liberasurecode_rs_vand' - Native, software-only Erasure Coding implementation that supports a Reed-Solomon backend
       - 'Jerasure' - Erasure Coding library that supports Reed-Solomon, Cauchy backends [1]
       - 'ISA-L' - Intel Storage Acceleration Library - SIMD accelerated Erasure Coding backends [2]
       - 'SHSS' - NTT Lab Japan's hybrid Erasure Coding backend [4]
@@ -40,6 +40,37 @@ Active Users
 
  * PyECLib - Python EC library:  https://pypi.python.org/pypi/PyECLib
  * Openstack Swift Object Store - https://wiki.openstack.org/wiki/Swift
+
+
+----
+
+Build and Install
+=================
+
+Install dependencies -
+
+ Debian/Ubuntu hosts:
+
+```sh
+ $ sudo apt-get install build-essential autoconf automake libtool
+```
+
+ Fedora/RedHat/Centos hosts:
+
+```sh
+ $ sudo yum install -y gcc make autoconf automake libtool
+```
+
+To build the liberasurecode repository, perform the following from the 
+top-level directory:
+
+``` sh
+ $ ./autogen.sh
+ $ ./configure
+ $ make
+ $ make test
+ $ sudo make install
+```
 
 ----
 
@@ -318,22 +349,6 @@ int liberasurecode_get_minimum_encode_size(int desc);
  */
 int liberasurecode_get_fragment_size(int desc, int data_len);
 ```
-----
-
-
-Build and Install
-=================
-
-To build the liberasurecode repository, perform the following from the 
-top-level directory:
-
-``` sh
- $ ./autogen.sh
- $ ./configure
- $ make
- $ make test
- $ sudo make install
-```
 
 ----
 
@@ -367,6 +382,7 @@ Code organization
  |   |       |                            code implementation (shared library)
  |   |       +-- xor_code.c
  |   |       +-- xor_hd_code.c
+ |   |   +-- rs_vand                  --> liberasurecode native Reed Soloman codes
  |   |
  |   +-- utils
  |       +-- chksum                   --> fragment checksum utils for erasure

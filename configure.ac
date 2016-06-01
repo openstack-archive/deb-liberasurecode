@@ -1,19 +1,38 @@
 ################################################################################
 #                           Standard Stuff
 ################################################################################
-AC_INIT(liberasurecode,1.1.0)
-AC_GNU_SOURCE
 
 AC_PREREQ([2.61])
-
-AM_INIT_AUTOMAKE([subdir-objects])
-LT_INIT # libtool
-
-AC_CONFIG_HEADER(include/config_liberasurecode.h)
-
+AC_INIT(liberasurecode, [-], 
+        [tusharsg AT gmail DOT com, kmgreen2 AT gmail DOT com],
+        [], [https://bitbucket.org/tsg-/liberasurecode/])
 AM_MAINTAINER_MODE([disable])
 m4_ifndef([AM_SILENT_RULES], [m4_define([AM_SILENT_RULES],[])])
 AM_SILENT_RULES([yes])
+
+# Get release version
+AC_PATH_PROG(SED, sed, "", $PATH:/bin:/usr/bin:/usr/local/bin)
+if test -z "$SED"; then
+  AC_MSG_WARN([sed was not found])
+fi
+VERINC="${srcdir}/include/erasurecode/erasurecode_version.h"
+AC_MSG_CHECKING([liberasurecode API version])
+LIBERASURECODE_VERSION_MAJOR=`$SED -ne 's/^#define _MAJOR *\([0-9]*\)/\1/p' ${VERINC} 2>/dev/null`
+AC_MSG_RESULT($LIBERASURECODE_VERSION_MAJOR)
+if test -z "$LIBERASURECODE_VERSION_MAJOR"; then
+  AC_MSG_ERROR([API version number can not be retrieved from $VERINC])
+fi
+LIBERASURECODE_VERSION_MINOR=`$SED -ne 's/^#define _MINOR *\([0-9]*\)/\1/p' ${VERINC} 2>/dev/null`
+LIBERASURECODE_VERSION_MICRO=`$SED -ne 's/^#define _REV *\([0-9]*\)/\1/p' ${VERINC} 2>/dev/null`
+LIBERASURECODE_VERSION=${LIBERASURECODE_VERSION_MAJOR}.${LIBERASURECODE_VERSION_MINOR}.${LIBERASURECODE_VERSION_MICRO}
+LIBERASURECODE_API_VERSION=${LIBERASURECODE_VERSION_MAJOR}
+
+LIBERASURECODE_VERSION_INFO=$((${LIBERASURECODE_VERSION_MAJOR}+${LIBERASURECODE_VERSION_MINOR})):${LIBERASURECODE_VERSION_MICRO}:${LIBERASURECODE_VERSION_MINOR}
+
+AC_GNU_SOURCE
+
+AM_INIT_AUTOMAKE([subdir-objects])
+LT_INIT # libtool
 
 AC_PROG_LN_S
 
@@ -24,6 +43,41 @@ AC_PROG_LIBTOOL
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
+
+PKG_PROG_PKG_CONFIG
+
+m4_ifndef([PKG_INSTALLDIR],[
+# PKG_INSTALLDIR(DIRECTORY)
+# -------------------------
+# Substitutes the variable pkgconfigdir as the location where a module
+# should install pkg-config .pc files. By default the directory is
+# $libdir/pkgconfig, but the default can be changed by passing
+# DIRECTORY. The user can override through the --with-pkgconfigdir
+# parameter.
+AC_DEFUN([PKG_INSTALLDIR],
+[m4_pushdef([pkg_default], [m4_default([$1], ['${libdir}/pkgconfig'])])
+m4_pushdef([pkg_description],
+    [pkg-config installation directory @<:@]pkg_default[@:>@])
+AC_ARG_WITH([pkgconfigdir],
+    [AS_HELP_STRING([--with-pkgconfigdir], pkg_description)],,
+    [with_pkgconfigdir=]pkg_default)
+AC_SUBST([pkgconfigdir], [$with_pkgconfigdir])
+m4_popdef([pkg_default])
+m4_popdef([pkg_description])
+]) dnl PKG_INSTALLDIR
+])
+
+PKG_INSTALLDIR
+
+AC_SUBST(LIBERASURECODE_VERSION_MAJOR)
+AC_SUBST(LIBERASURECODE_API_VERSION)
+AC_SUBST(LIBERASURECODE_VERSION_MINOR)
+AC_SUBST(LIBERASURECODE_VERSION_MICRO)
+AC_SUBST(LIBERASURECODE_VERSION)
+AC_SUBST(LIBERASURECODE_VERSION_INFO)
+AC_SUBST([PACKAGE_VERSION], LIBERASURECODE_VERSION)
+
+AC_CONFIG_HEADER(include/config_liberasurecode.h)
 
 AX_EXT()
 
@@ -142,7 +196,9 @@ fi
 
 # Detect the SIMD features supported by both the compiler and the CPU
 SIMD_FLAGS=""
-cat get_flags_from_cpuid.c | sed "s/FLAGSFROMAUTOCONF/${SUPPORTED_FLAGS}/" | $CC -x c -g - -o get_flags_from_cpuid
+cat "$srcdir/get_flags_from_cpuid.c" \
+    | sed "s/FLAGSFROMAUTOCONF/${SUPPORTED_FLAGS}/" \
+    | $CC -x c -g - -o get_flags_from_cpuid
 if [[ -e ./get_flags_from_cpuid ]]; then
   chmod 755 get_flags_from_cpuid; ./get_flags_from_cpuid; rm ./get_flags_from_cpuid
   if [[ -e compiler_flags ]]; then
@@ -206,9 +262,28 @@ AC_CONFIG_FILES([\
     Xorcode.pc
 ])
 
+AC_CONFIG_FILES([\
+    erasurecode-${LIBERASURECODE_API_VERSION}.pc:erasurecode.pc], [],
+    [LIBERASURECODE_API_VERSION='$LIBERASURECODE_API_VERSION'])
+
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 AM_COND_IF([HAVE_DOXYGEN],
            [AC_CONFIG_FILES([doc/doxygen.cfg])])
 
 AC_OUTPUT
 
+AC_MSG_NOTICE([
+
+ $PACKAGE configured:
+ --------------------------
+
+  version:                $LIBERASURECODE_VERSION
+  interface revision:     $LIBERASURECODE_VERSION_INFO
+  generate documentation: $DOXYGEN
+  installation prefix:    $prefix
+  CFLAGS:                 $CXXFLAGS $CFLAGS
+  LDFLAGS:                $LIBS $LDFLAGS
+
+ type "make" followed by "make install" as root.
+ $DOXMAKE
+])
