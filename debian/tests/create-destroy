@@ -13,7 +13,8 @@ int main()
 {
     struct ec_args args = {0};
     args.k = 2;
-    args.m = 1;
+    args.m = 3;
+    args.hd = 3;
 
     // Create
     int e = liberasurecode_instance_create($BACKEND, &args);
