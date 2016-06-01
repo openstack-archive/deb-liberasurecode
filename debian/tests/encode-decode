@@ -1,0 +1,91 @@
+#!/bin/sh
+
+set -e
+
+BACKEND=$1
+
+cd "$ADTTMP"
+
+cat <<TEST_END > encode-decode.c
+#include <erasurecode.h>
+
+int main()
+{
+    struct ec_args args = {0};
+    args.k = 3;
+    args.m = 3;
+    args.hd = 3;
+    const char in[] = "dummy input data";
+    uint64_t in_len = strlen(in) + 1;
+    char **out_data;
+    char **out_parity;
+    uint64_t out_len;
+    char *decoded;
+    uint64_t decoded_len;
+    int ret;
+    int e;
+
+    setbuf(stdout, NULL);
+
+    // Create
+    printf("create: ");
+    e = liberasurecode_instance_create($BACKEND, &args);
+    if (e <= 0) {
+        printf("ERROR: liberasurecode_instance_create: %d\n", e);
+        return 1;
+    }
+    printf("OK\n");
+
+    // Encode
+    printf("encode: ");
+    ret = liberasurecode_encode(e, in, in_len, &out_data, &out_parity, &out_len);
+    if (ret) {
+        printf("ERROR: liberasurecode_encode: %d\n", ret);
+        return 1;
+    }
+    printf("OK\n");
+
+    // Decode
+    printf("decode: ");
+    ret = liberasurecode_decode(e, out_data, args.k, out_len, 0, &decoded, &decoded_len);
+    if (ret) {
+        printf("ERROR: liberasurecode_decode: %d\n", ret);
+        return 1;
+    }
+    printf("OK\n");
+
+    // Compare
+    printf("compare: ");
+    if (in_len != decoded_len) {
+        printf("ERROR: wrong decoded_len: %lu != %lu\n", in_len, decoded_len);
+        return 1;
+    }
+    if (strcmp(in, decoded) != 0) {
+        printf("ERROR: decoded output is not same as input: '%s' != '%s'\n", in, decoded);
+        return 1;
+    }
+    printf("OK\n");
+
+    // Cleanup
+    printf("cleanup: ");
+    liberasurecode_encode_cleanup(e, out_data, out_parity);
+    liberasurecode_decode_cleanup(e, decoded);
+    printf("OK\n");
+
+    // Destroy
+    printf("destroy: ");
+    ret = liberasurecode_instance_destroy(e);
+    if (ret) {
+        printf("ERROR: liberasurecode_instance_destroy: %d\n", ret);
+        return 1;
+    }
+    printf("OK\n");
+
+    return 0;
+}
+TEST_END
+
+gcc -Wall -o encode-decode.bin encode-decode.c -lerasurecode -ldl
+echo "build: OK"
+./encode-decode.bin
+rm encode-decode.c encode-decode.bin

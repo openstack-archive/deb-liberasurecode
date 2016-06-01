@@ -8,6 +8,7 @@ liberasurecode (1.2.0-1) UNRELEASED; urgency=medium
   * Rebased disable-sse.patch
   * Added symbols file
   * Added Debian test for EC_BACKEND_FLAT_XOR_HD backend
+  * Debian tests enhancement - test encode+decode and compare result
 
  -- Ondřej Nový <novy@ondrej.org>  Sat, 09 Apr 2016 19:23:28 +0200
 
