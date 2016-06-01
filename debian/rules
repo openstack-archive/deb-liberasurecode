@@ -1,27 +1,7 @@
 #!/usr/bin/make -f
 
-UPSTREAM_GIT    ?= https://bitbucket.org/tsg-/liberasurecode.git
-
-DEBVERS         ?= $(shell dpkg-parsechangelog | sed -n -e 's/^Version: //p')
-VERSION         ?= $(shell echo '$(DEBVERS)' | sed -e 's/^[[:digit:]]*://' -e 's/[-].*//')
-DEBFLAVOR       ?= $(shell dpkg-parsechangelog | grep -E ^Distribution: | cut -d" " -f2)
-DEBPKGNAME      ?= $(shell dpkg-parsechangelog | grep -E ^Source: | cut -d" " -f2)
-GIT_TAG         ?= $(shell echo '$(VERSION)' | sed -e 's/~/_/')
-
-export HOME=$(CURDIR)
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+-include /usr/share/openstack-pkg-tools/pkgos.make
 
 %:
 	dh $@  --with autoreconf --parallel
-
-gen-orig-xz:
-	git tag -v $(GIT_TAG) || true
-	if [ ! -f ../$(DEBPKGNAME)_$(VERSION).orig.tar.xz ] ; then \
-		git archive --prefix=$(DEBPKGNAME)-$(VERSION)/ $(GIT_TAG) | xz >../$(DEBPKGNAME)_$(VERSION).orig.tar.xz ; \
-	fi
-	[ ! -e ../build-area ] && mkdir ../build-area || true
-	[ ! -e ../build-area/$(DEBPKGNAME)_$(VERSION).orig.tar.xz ] && cp ../$(DEBPKGNAME)_$(VERSION).orig.tar.xz ../build-area
-
-fetch-upstream-remote:
-	git remote add upstream $(UPSTREAM_GIT) || true
-	git fetch upstream

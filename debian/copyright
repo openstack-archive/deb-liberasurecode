@@ -1,6 +1,6 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: liberasurecode
-Source: https://bitbucket.org/tsg-/liberasurecode
+Source: https://github.com/openstack/liberasurecode/
 
 Files: *
 Copyright: (c) 2014, Eric Lambert <eric_lambert@xyratex.com>
