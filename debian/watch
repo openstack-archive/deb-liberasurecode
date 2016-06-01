@@ -1,3 +1,3 @@
 version=3
-opts="uversionmangle=s/[\.-](b|rc)/~$1/" \
-https://bitbucket.org/tsg-/liberasurecode/downloads /tsg-/liberasurecode/get/v(\d[brc\d\.-]+)\.tar\.gz
+opts=filenamemangle=s/.+\/v?(\d\S*)\.tar\.gz/liberasurecode-$1\.tar\.gz/ \
+  https://github.com/openstack/liberasurecode/tags .*/v?(\d\S*)\.tar\.gz
