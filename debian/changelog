@@ -6,6 +6,7 @@ liberasurecode (1.2.0-1) UNRELEASED; urgency=medium
   * Removed reproducible-build.patch and use-full-soname.patch
     (Applied upstream)
   * Rebased disable-sse.patch
+  * Added symbols file
 
  -- Ondřej Nový <novy@ondrej.org>  Sat, 09 Apr 2016 19:23:28 +0200
 
