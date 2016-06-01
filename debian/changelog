@@ -1,4 +1,4 @@
-liberasurecode (1.2.0-1) UNRELEASED; urgency=medium
+liberasurecode (1.2.0-1) unstable; urgency=medium
 
   * New upstream release
   * Upstream moved to official Openstack project
@@ -11,7 +11,7 @@ liberasurecode (1.2.0-1) UNRELEASED; urgency=medium
     - test encode+decode and compare result
     - test EC_BACKEND_FLAT_XOR_HD backend
 
- -- Ondřej Nový <novy@ondrej.org>  Sat, 09 Apr 2016 19:23:28 +0200
+ -- Ondřej Nový <novy@ondrej.org>  Wed, 01 Jun 2016 14:14:58 +0200
 
 liberasurecode (1.1.0-5) unstable; urgency=medium
 
