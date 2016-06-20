@@ -3,7 +3,7 @@ Section: libs
 Priority: extra
 Maintainer: PKG OpenStack <openstack-devel@lists.alioth.debian.org>
 Uploaders: Thomas Goirand <zigo@debian.org>,
-           Ondřej Nový <novy@ondrej.org>,
+           Ondřej Nový <onovy@debian.org>,
 Build-Depends: autoconf-archive,
                autotools-dev,
                debhelper (>= 9),

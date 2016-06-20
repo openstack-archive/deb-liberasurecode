@@ -1,3 +1,9 @@
+liberasurecode (1.2.0-2) UNRELEASED; urgency=medium
+
+  * d/{control,copyright}: Use my @debian.org email address
+
+ -- Ondřej Nový <onovy@debian.org>  Mon, 20 Jun 2016 19:56:37 +0200
+
 liberasurecode (1.2.0-1) unstable; urgency=medium
 
   * New upstream release
