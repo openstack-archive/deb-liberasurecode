@@ -10,8 +10,8 @@ Build-Depends: autoconf-archive,
                dh-autoreconf,
 Standards-Version: 3.9.8
 Homepage: https://github.com/openstack/liberasurecode
-Vcs-Git: https://anonscm.debian.org/git/openstack/liberasurecode.git
-Vcs-Browser: https://anonscm.debian.org/cgit/openstack/liberasurecode.git/
+Vcs-Git: https://git.openstack.org/openstack/deb-liberasurecode -b debian/newton
+Vcs-Browser: https://git.openstack.org/cgit/openstack/deb-liberasurecode?h=debian%2Fnewton
 
 Package: liberasurecode-dev
 Section: libdevel

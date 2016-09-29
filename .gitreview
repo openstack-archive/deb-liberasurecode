@@ -1,4 +1,5 @@
 [gerrit]
 host=review.openstack.org
 port=29418
-project=openstack/liberasurecode.git
+project=openstack/deb-liberasurecode.git
+defaultbranch=debian/newton
