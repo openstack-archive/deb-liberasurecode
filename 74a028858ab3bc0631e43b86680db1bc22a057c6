@@ -1,0 +1,8 @@
+Code-Review+2: Thiago da Silva <thiago@redhat.com>
+Workflow+1: Thiago da Silva <thiago@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 19 Jul 2016 11:37:50 +0000
+Reviewed-on: https://review.openstack.org/341680
+Project: openstack/deb-liberasurecode
+Branch: refs/heads/master

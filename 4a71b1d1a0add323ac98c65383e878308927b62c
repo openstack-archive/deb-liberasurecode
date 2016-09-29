@@ -1,0 +1,10 @@
+Code-Review+1: Paul Belanger <pabelanger@redhat.com>
+Code-Review+2: Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>
+Code-Review+2: Thiago da Silva <thiago@redhat.com>
+Workflow+1: Thiago da Silva <thiago@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 12 Jul 2016 18:00:57 +0000
+Reviewed-on: https://review.openstack.org/325029
+Project: openstack/deb-liberasurecode
+Branch: refs/heads/master
