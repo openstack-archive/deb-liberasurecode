@@ -1,0 +1,10 @@
+Code-Review+1: Tim Burke <tim@swiftstack.com>
+Code-Review+2: Tushar Gohad <tushar.gohad@intel.com>
+Code-Review+2: Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>
+Workflow+1: Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 07 Nov 2016 05:27:21 +0000
+Reviewed-on: https://review.openstack.org/324083
+Project: openstack/deb-liberasurecode
+Branch: refs/heads/master
