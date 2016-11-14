@@ -331,7 +331,7 @@ int liberasurecode_instance_destroy(int desc)
     /* dlclose() backend library */
     liberasurecode_backend_close(instance);
 
-    /* Remove instace from registry */
+    /* Remove instance from registry */
     rc = liberasurecode_backend_instance_unregister(instance);
     if (rc == 0) {
         free(instance);
@@ -1072,6 +1072,9 @@ int is_invalid_fragment_header(fragment_header_t *header)
 {
     uint32_t *stored_csum = NULL, csum = 0;
     assert (NULL != header);
+    if (header->libec_version == 0)
+        /* libec_version must be bigger than 0 */
+        return 1;
     if (header->libec_version < _VERSION(1,2,0))
         /* no metadata checksum support */
         return 0;
@@ -1087,7 +1090,7 @@ int liberasurecode_verify_fragment_metadata(ec_backend_t be,
 {
     int k = be->args.uargs.k;
     int m = be->args.uargs.m;
-    if (md->idx < 0 || (md->idx > (k + m))) {
+    if (md->idx > (k + m)) {
         return 1;
     }
     if (md->backend_id != be->common.id) {
@@ -1221,6 +1224,8 @@ int liberasurecode_get_fragment_size(int desc, int data_len)
 {
     ec_backend_t instance = liberasurecode_backend_instance_get_by_desc(desc);
     // TODO: Create a common function to calculate fragment size also for preprocessing
+    if (NULL == instance)
+        return -EBACKENDNOTAVAIL;
     int aligned_data_len = get_aligned_data_size(instance, data_len);
     int size = (aligned_data_len / instance->args.uargs.k) + instance->common.backend_metadata_size;
 
