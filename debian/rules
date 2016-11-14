@@ -4,4 +4,4 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 -include /usr/share/openstack-pkg-tools/pkgos.make
 
 %:
-	dh $@  --with autoreconf --parallel
+	dh $@
