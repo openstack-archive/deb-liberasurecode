@@ -1,3 +1,9 @@
+liberasurecode (1.3.1-1~bpo8+1) jessie-backports; urgency=medium
+
+  * Rebuild for jessie-backports.
+
+ -- Ondřej Nový <onovy@debian.org>  Sat, 26 Nov 2016 13:12:28 +0100
+
 liberasurecode (1.3.1-1) unstable; urgency=medium
 
   * New upstream release
