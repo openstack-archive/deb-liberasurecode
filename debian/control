@@ -4,9 +4,7 @@ Priority: extra
 Maintainer: PKG OpenStack <openstack-devel@lists.alioth.debian.org>
 Uploaders: Thomas Goirand <zigo@debian.org>,
            Ondřej Nový <onovy@debian.org>,
-Build-Depends: autoconf-archive,
-               autotools-dev,
-               debhelper (>= 10),
+Build-Depends: debhelper (>= 10),
 Standards-Version: 3.9.8
 Homepage: https://github.com/openstack/liberasurecode
 Vcs-Git: https://git.openstack.org/openstack/deb-liberasurecode -b debian/newton
@@ -29,8 +27,8 @@ Package: liberasurecode1
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-Suggests: libjerasure2,
-          libisal2,
+Suggests: libisal2,
+          libjerasure2,
 Breaks: liberasurecode0,
 Replaces: liberasurecode0,
 Multi-Arch: same

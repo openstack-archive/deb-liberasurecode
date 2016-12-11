@@ -49,6 +49,7 @@ extern struct ec_backend_common backend_jerasure_rs_cauchy;
 extern struct ec_backend_common backend_isa_l_rs_vand;
 extern struct ec_backend_common backend_shss;
 extern struct ec_backend_common backend_liberasurecode_rs_vand;
+extern struct ec_backend_common backend_isa_l_rs_cauchy;
 
 ec_backend_t ec_backends_supported[] = {
     (ec_backend_t) &backend_null,
@@ -58,6 +59,7 @@ ec_backend_t ec_backends_supported[] = {
     (ec_backend_t) &backend_isa_l_rs_vand,
     (ec_backend_t) &backend_shss,
     (ec_backend_t) &backend_liberasurecode_rs_vand,
+    (ec_backend_t) &backend_isa_l_rs_cauchy,
     NULL,
 };
 
@@ -812,18 +814,21 @@ int liberasurecode_reconstruct_fragment(int desc,
     data = alloc_zeroed_buffer(sizeof(char*) * k);
     if (NULL == data) {
         log_error("Could not allocate data buffer!");
+        ret = -ENOMEM;
         goto out;
     }
 
     parity = alloc_zeroed_buffer(sizeof(char*) * m);
     if (NULL == parity) {
         log_error("Could not allocate parity buffer!");
+        ret = -ENOMEM;
         goto out;
     }
 
     missing_idxs = alloc_and_set_buffer(sizeof(int*) * (k + m), -1);
     if (NULL == missing_idxs) {
         log_error("Could not allocate missing_idxs buffer!");
+        ret = -ENOMEM;
         goto out;
     }
 
@@ -1230,6 +1235,16 @@ int liberasurecode_get_fragment_size(int desc, int data_len)
     int size = (aligned_data_len / instance->args.uargs.k) + instance->common.backend_metadata_size;
 
     return size;
+}
+
+
+/**
+ * This will return the liberasurecode version for the descriptor
+ */
+
+uint32_t liberasurecode_get_version()
+{
+    return LIBERASURECODE_VERSION;
 }
 
 /* ==~=*=~==~=*=~==~=*=~==~=*=~==~=* misc *=~==~=*=~==~=*=~==~=*=~==~=*=~== */

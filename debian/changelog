@@ -1,3 +1,11 @@
+liberasurecode (1.4.0-1) unstable; urgency=medium
+
+  * New upstream release
+  * Removed B-D on autoconf-archive and autotools-dev - they are not needed
+  * debian/tests: Added EC_BACKEND_ISA_L_RS_CAUCHY backend test
+
+ -- Ondřej Nový <onovy@debian.org>  Sun, 11 Dec 2016 15:08:33 +0100
+
 liberasurecode (1.3.1-1) unstable; urgency=medium
 
   * New upstream release

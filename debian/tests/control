@@ -7,5 +7,8 @@ Depends: @, build-essential, libjerasure-dev
 Test-Command: debian/tests/encode-decode EC_BACKEND_ISA_L_RS_VAND
 Depends: @, build-essential, libisal-dev
 
+Test-Command: debian/tests/encode-decode EC_BACKEND_ISA_L_RS_CAUCHY
+Depends: @, build-essential, libisal-dev
+
 Test-Command: debian/tests/encode-decode EC_BACKEND_FLAT_XOR_HD
 Depends: @, build-essential

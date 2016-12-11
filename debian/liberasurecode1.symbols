@@ -117,6 +117,7 @@ liberasurecode.so.1 liberasurecode1 #MINVER#
  alloc_fragment_buffer@Base 1.1.0
  alloc_zeroed_buffer@Base 1.1.0
  backend_flat_xor_hd@Base 1.1.0
+ backend_isa_l_rs_cauchy@Base 1.4.0
  backend_isa_l_rs_vand@Base 1.1.0
  backend_jerasure_rs_cauchy@Base 1.1.0
  backend_jerasure_rs_vand@Base 1.1.0
@@ -163,6 +164,16 @@ liberasurecode.so.1 liberasurecode1 #MINVER#
  is_invalid_fragment_header@Base 1.2.0
  is_invalid_fragment_metadata@Base 1.2.0
 #MISSING: 1.2.0# is_valid_fragment_metadata@Base 1.1.0
+ isa_l_common_init@Base 1.4.0
+ isa_l_decode@Base 1.4.0
+ isa_l_element_size@Base 1.4.0
+ isa_l_encode@Base 1.4.0
+ isa_l_exit@Base 1.4.0
+ isa_l_min_fragments@Base 1.4.0
+ isa_l_reconstruct@Base 1.4.0
+ isa_l_rs_cauchy@Base 1.4.0
+ isa_l_rs_cauchy_op_stubs@Base 1.4.0
+ isa_l_rs_cauchy_ops@Base 1.4.0
  isa_l_rs_vand@Base 1.1.0
  isa_l_rs_vand_op_stubs@Base 1.1.0
  isa_l_rs_vand_ops@Base 1.1.0
@@ -189,6 +200,7 @@ liberasurecode.so.1 liberasurecode1 #MINVER#
  liberasurecode_get_fragment_metadata@Base 1.1.0
  liberasurecode_get_fragment_size@Base 1.1.0
  liberasurecode_get_minimum_encode_size@Base 1.1.0
+ liberasurecode_get_version@Base 1.4.0
  liberasurecode_init@Base 1.1.0
  liberasurecode_instance_create@Base 1.1.0
  liberasurecode_instance_destroy@Base 1.1.0

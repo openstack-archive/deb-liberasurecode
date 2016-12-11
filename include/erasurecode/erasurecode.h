@@ -48,6 +48,7 @@ typedef enum {
     EC_BACKEND_ISA_L_RS_VAND          = 4,
     EC_BACKEND_SHSS                   = 5,
     EC_BACKEND_LIBERASURECODE_RS_VAND = 6,
+    EC_BACKEND_ISA_L_RS_CAUCHY        = 7,
     EC_BACKENDS_MAX,
 } ec_backend_id_t;
 
@@ -374,6 +375,14 @@ int liberasurecode_get_minimum_encode_size(int desc);
  *                         if an error, return value will be negative
  */
 int liberasurecode_get_fragment_size(int desc, int data_len);
+
+/**
+ * This will return the liberasurecode version for the descriptor
+ *
+ * @return version uint32_t - from erasurecode_version.h
+ */
+
+uint32_t liberasurecode_get_version();
 
 /* ==~=*=~===~=*=~==~=*=~== liberasurecode Error codes =~=*=~==~=~=*=~==~== */
 
