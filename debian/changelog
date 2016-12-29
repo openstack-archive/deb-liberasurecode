@@ -1,3 +1,9 @@
+liberasurecode (1.4.0-2) unstable; urgency=medium
+
+  * Remove d/files from source package
+
+ -- Ondřej Nový <onovy@debian.org>  Thu, 29 Dec 2016 14:31:21 +0100
+
 liberasurecode (1.4.0-1) unstable; urgency=medium
 
   * New upstream release
