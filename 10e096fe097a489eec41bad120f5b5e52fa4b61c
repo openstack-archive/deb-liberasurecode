@@ -1,0 +1,11 @@
+Code-Review+1: Chris Smart <mail@csmart.io>
+Code-Review+2: Tim Burke <tim@swiftstack.com>
+Code-Review+1: Kevin Greenan <kmgreen2@gmail.com>
+Code-Review+2: Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>
+Workflow+1: Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 15 Feb 2017 08:01:04 +0000
+Reviewed-on: https://review.openstack.org/431812
+Project: openstack/deb-liberasurecode
+Branch: refs/heads/master

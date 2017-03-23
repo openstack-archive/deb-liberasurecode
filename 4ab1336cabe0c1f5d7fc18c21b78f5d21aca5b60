@@ -1,0 +1,8 @@
+Code-Review+2: Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>
+Workflow+1: Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 21 Feb 2017 21:13:05 +0000
+Reviewed-on: https://review.openstack.org/434696
+Project: openstack/deb-liberasurecode
+Branch: refs/heads/master
