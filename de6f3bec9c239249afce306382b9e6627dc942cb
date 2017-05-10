@@ -1,0 +1,9 @@
+Code-Review+2: Kota Tsuyuzaki <tsuyuzaki.kota@lab.ntt.co.jp>
+Workflow+1: Timur Alperovich <timur.alperovich@gmail.com>
+Code-Review+2: Timur Alperovich <timur.alperovich@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 10 May 2017 20:37:55 +0000
+Reviewed-on: https://review.openstack.org/438213
+Project: openstack/deb-liberasurecode
+Branch: refs/heads/master
