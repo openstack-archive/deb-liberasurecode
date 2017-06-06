@@ -1,0 +1,9 @@
+Code-Review+2: Thiago da Silva <thiago@redhat.com>
+Code-Review+2: Tim Burke <tim@swiftstack.com>
+Workflow+1: Tim Burke <tim@swiftstack.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 06 Jun 2017 19:17:12 +0000
+Reviewed-on: https://review.openstack.org/467418
+Project: openstack/deb-liberasurecode
+Branch: refs/heads/master
